@@ -2,7 +2,7 @@
 
 client_id = "125a1bb75a430f1fb758d9f78048a2b9"
 name = "Zip Code Checker"
-application_url = "http://localhost:3000"
+application_url = "https://zip-code-checker-production-b1a0.up.railway.app"
 embedded = true
 
 [webhooks]
@@ -15,7 +15,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "http://localhost:3000/auth/callback" ]
+redirect_urls = [ "https://zip-code-checker-production-b1a0.up.railway.app/auth/callback" ]
 
 [build]
 automatically_update_urls_on_dev = true

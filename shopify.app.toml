@@ -2,14 +2,14 @@
 
 client_id = "0f048c328463b2e5d4659735a126703d"
 name = "Zip Code Checker"
-application_url = "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev"
+application_url = "https://zip-code-checker-production-b1a0.up.railway.app"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
 
 [app_proxy]
-url = "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev"
+url = "https://zip-code-checker-production-b1a0.up.railway.app"
 subpath = "zipcheck"
 prefix = "apps"
 
@@ -51,4 +51,4 @@ optional_scopes = []
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev/auth/callback" ]
+redirect_urls = [ "https://zip-code-checker-production-b1a0.up.railway.app/auth/callback" ]
