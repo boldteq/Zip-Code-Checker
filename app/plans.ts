@@ -1,0 +1,104 @@
+// Shared plan constants — safe for both client and server
+
+export const PLAN_FREE = "free";
+export const PLAN_STARTER_MONTHLY = "Starter Monthly";
+export const PLAN_STARTER_ANNUAL = "Starter Annual";
+export const PLAN_PRO_MONTHLY = "Pro Monthly";
+export const PLAN_PRO_ANNUAL = "Pro Annual";
+export const PLAN_ULTIMATE_MONTHLY = "Ultimate Monthly";
+export const PLAN_ULTIMATE_ANNUAL = "Ultimate Annual";
+
+export const ALL_PAID_PLANS = [
+  PLAN_STARTER_MONTHLY,
+  PLAN_STARTER_ANNUAL,
+  PLAN_PRO_MONTHLY,
+  PLAN_PRO_ANNUAL,
+  PLAN_ULTIMATE_MONTHLY,
+  PLAN_ULTIMATE_ANNUAL,
+];
+
+export type PlanTier = "free" | "starter" | "pro" | "ultimate";
+
+export interface PlanLimits {
+  maxZipCodes: number;
+  allowBlocked: boolean;
+  maxDeliveryRules: number;
+  maxWaitlist: number;
+  csvImport: boolean;
+  csvExport: boolean;
+  widgetFullCustom: boolean;
+  showEtaCodReturn: boolean;
+  cartBlocking: boolean;
+  customCss: boolean;
+  apiAccess: boolean;
+  label: string;
+}
+
+export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
+  free: {
+    maxZipCodes: 20,
+    allowBlocked: false,
+    maxDeliveryRules: 0,
+    maxWaitlist: 0,
+    csvImport: false,
+    csvExport: false,
+    widgetFullCustom: false,
+    showEtaCodReturn: false,
+    cartBlocking: false,
+    customCss: false,
+    apiAccess: false,
+    label: "Free",
+  },
+  starter: {
+    maxZipCodes: 500,
+    allowBlocked: false,
+    maxDeliveryRules: 3,
+    maxWaitlist: 25,
+    csvImport: true,
+    csvExport: false,
+    widgetFullCustom: true,
+    showEtaCodReturn: true,
+    cartBlocking: false,
+    customCss: false,
+    apiAccess: false,
+    label: "Starter",
+  },
+  pro: {
+    maxZipCodes: Infinity,
+    allowBlocked: true,
+    maxDeliveryRules: Infinity,
+    maxWaitlist: Infinity,
+    csvImport: true,
+    csvExport: true,
+    widgetFullCustom: true,
+    showEtaCodReturn: true,
+    cartBlocking: true,
+    customCss: false,
+    apiAccess: false,
+    label: "Pro",
+  },
+  ultimate: {
+    maxZipCodes: Infinity,
+    allowBlocked: true,
+    maxDeliveryRules: Infinity,
+    maxWaitlist: Infinity,
+    csvImport: true,
+    csvExport: true,
+    widgetFullCustom: true,
+    showEtaCodReturn: true,
+    cartBlocking: true,
+    customCss: true,
+    apiAccess: true,
+    label: "Ultimate",
+  },
+};
+
+export function getPlanTier(planName: string): PlanTier {
+  if (planName === PLAN_STARTER_MONTHLY || planName === PLAN_STARTER_ANNUAL)
+    return "starter";
+  if (planName === PLAN_PRO_MONTHLY || planName === PLAN_PRO_ANNUAL)
+    return "pro";
+  if (planName === PLAN_ULTIMATE_MONTHLY || planName === PLAN_ULTIMATE_ANNUAL)
+    return "ultimate";
+  return "free";
+}

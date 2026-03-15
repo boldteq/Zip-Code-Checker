@@ -1,0 +1,13 @@
+{
+  "blocks": {
+    "zip_code_checker": {
+      "name": "Zip Code Checker"
+    },
+    "cart_validator": {
+      "name": "Zip Code Checker — Cart Validator",
+      "title": "Zip Code Checker — Cart Validator",
+      "warning_title": "Delivery Not Available",
+      "dismiss": "Dismiss"
+    }
+  }
+}

@@ -1,0 +1,147 @@
+
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                   String   @id
+  shop                 String
+  state                String
+  isOnline             Boolean
+  scope                String?
+  expires              DateTime?
+  accessToken          String
+  userId               BigInt?
+  firstName            String?
+  lastName             String?
+  email                String?
+  accountOwner         Boolean?
+  locale               String?
+  collaborator         Boolean?
+  emailVerified        Boolean?
+  refreshToken         String?
+  refreshTokenExpires  DateTime?
+}
+
+model ZipCode {
+  id        String   @id @default(cuid())
+  shop      String
+  zipCode   String
+  label     String?
+  zone      String?
+  message   String?
+  eta       String?
+  type         String   @default("allowed")
+  isActive     Boolean  @default(true)
+  codAvailable Boolean?
+  returnPolicy String?
+  createdAt    DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shop, zipCode])
+}
+
+model DeliveryRule {
+  id            String   @id @default(cuid())
+  shop          String
+  name          String
+  zone          String?
+  zipCodes      String?  // comma-separated zip codes, or empty for "all in zone"
+  minOrderAmount Float?
+  deliveryFee   Float?
+  freeShippingAbove Float?
+  estimatedDays String?
+  cutoffTime    String?  // e.g. "14:00" — orders after this go next day
+  daysOfWeek    String?  // e.g. "Mon,Tue,Wed,Thu,Fri"
+  isActive      Boolean  @default(true)
+  priority      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([shop])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  shop      String
+  email     String
+  zipCode   String
+  note      String?
+  status    String   @default("waiting") // waiting, notified, converted
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shop, email, zipCode])
+  @@index([shop])
+}
+
+model WidgetConfig {
+  id                    String  @id @default(cuid())
+  shop                  String  @unique
+  // Layout
+  position              String  @default("inline") // inline, floating, popup
+  // Colors
+  primaryColor          String  @default("#008060")
+  successColor          String  @default("#008060")
+  errorColor            String  @default("#D72C0D")
+  backgroundColor       String  @default("#FFFFFF")
+  textColor             String  @default("#202223")
+  // Text
+  heading               String  @default("Check Delivery Availability")
+  placeholder           String  @default("Enter your zip code")
+  buttonText            String  @default("Check")
+  successMessage        String  @default("Great news! We deliver to your area.")
+  errorMessage          String  @default("Sorry, we don't deliver to this area yet.")
+  notFoundMessage       String  @default("This zip code was not found in our system.")
+  // Features
+  showEta               Boolean @default(true)
+  showZone              Boolean @default(false)
+  showWaitlistOnFailure Boolean @default(false)
+  showCod               Boolean @default(true)
+  showReturnPolicy      Boolean @default(true)
+  showCutoffTime        Boolean @default(true)
+  showDeliveryDays      Boolean @default(true)
+  blockCartOnInvalid    Boolean @default(false)
+  blockCheckoutInCart   Boolean @default(false)
+  showSocialProof       Boolean @default(true)
+  // Border
+  borderRadius          String  @default("8")
+  // Custom CSS
+  customCss             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id                    String    @id @default(cuid())
+  shop                  String    @unique
+  planId                String    @default("free")
+  billingInterval       String    @default("monthly")
+  shopifySubscriptionId String?
+  status                String    @default("active")
+  trialEndsAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model ShopSettings {
+  id                String   @id @default(cuid())
+  shop              String   @unique
+  defaultBehavior   String   @default("block") // "block" = block all unlisted zips, "allow" = allow all unlisted zips
+  notificationEmail String?  // email to receive waitlist notifications
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

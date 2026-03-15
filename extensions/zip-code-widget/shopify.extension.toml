@@ -1,0 +1,21 @@
+api_version = "2026-01"
+
+[[extensions]]
+uid = "553af7b8-0951-ccfa-09f3-d686ef53fec53838909f"
+type = "theme"
+name = "Zip Code Checker"
+handle = "zip-code-checker"
+
+  [[extensions.blocks]]
+  type = "zip-code-checker"
+  name = "Zip Code Checker"
+
+  [[extensions.blocks]]
+  type = "cart-validator"
+  name = "Zip Code Checker — Cart Validator"
+  limit = 1
+
+  [[extensions.blocks]]
+  type = "app_embed"
+  name = "Zip Code Checker"
+  target = "body"

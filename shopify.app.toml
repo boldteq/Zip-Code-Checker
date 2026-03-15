@@ -1,0 +1,54 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0f048c328463b2e5d4659735a126703d"
+name = "Zip Code Checker"
+application_url = "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[app_proxy]
+url = "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev"
+subpath = "zipcheck"
+prefix = "apps"
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "/webhooks/app_subscriptions/update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/data_request" ]
+  uri = "/webhooks/customers/data_request"
+  compliance_topic = true
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/redact" ]
+  uri = "/webhooks/customers/redact"
+  compliance_topic = true
+
+  [[webhooks.subscriptions]]
+  topics = [ "shop/redact" ]
+  uri = "/webhooks/shop/redact"
+  compliance_topic = true
+
+[access_scopes]
+# read_themes is required to detect whether the app embed is enabled in the
+# merchant's active theme (reads config/settings_data.json via GraphQL themes API).
+scopes = "read_themes"
+optional_scopes = []
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://automatic-palm-tree-q7rgr65prq672x9p6-4040.app.github.dev/auth/callback" ]

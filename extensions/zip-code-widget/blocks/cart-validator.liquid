@@ -1,0 +1,195 @@
+{% comment %}
+  Zip Code Checker — Cart Validator Block
+  Place this block on your Cart page template in the Theme Editor.
+  It reads the validation state set by the Zip Code Checker widget and
+  warns customers with non-serviceable ZIP codes before they check out.
+{% endcomment %}
+
+{% if request.design_mode %}
+  {%- comment -%} Theme Editor preview — show sample warning state {%- endcomment -%}
+  <div class="zcc-cart-warning zcc-cart-warning--preview" style="
+    background: #fff4f4;
+    border: 2px solid #d72c0d;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-family: inherit;
+  ">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:1.4em;">⚠️</span>
+      <div>
+        <strong style="color:#d72c0d; font-size:0.95em;">Delivery Not Available</strong>
+        <p style="margin:4px 0 0; font-size:0.85em; color:#6d7175;">
+          The Zip Code Checker Cart Validator is active. Customers with non-serviceable ZIP codes will see a warning here.
+        </p>
+      </div>
+    </div>
+  </div>
+{% else %}
+  {%- liquid
+    assign shop_domain = shop.permanent_domain
+    assign metafield_value = shop.metafields.zip_checker.widget_config.value
+  -%}
+
+  <div id="zcc-cart-validator" style="display:none; margin: 16px 0;" aria-live="polite"></div>
+
+  <style>
+    #zcc-cart-validator { font-family: inherit; }
+    .zcc-cv-banner {
+      background: #fff4f4;
+      border: 2px solid #d72c0d;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .zcc-cv-icon { font-size: 1.3em; flex-shrink: 0; margin-top: 2px; }
+    .zcc-cv-content { flex: 1; }
+    .zcc-cv-title {
+      color: #d72c0d;
+      font-weight: 700;
+      font-size: 0.95em;
+      margin: 0 0 4px;
+    }
+    .zcc-cv-msg {
+      color: #202223;
+      font-size: 0.875em;
+      margin: 0 0 8px;
+    }
+    .zcc-cv-zip {
+      font-weight: 700;
+      color: #d72c0d;
+    }
+    .zcc-cv-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .zcc-cv-dismiss {
+      background: none;
+      border: 1px solid #d72c0d;
+      color: #d72c0d;
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-size: 0.8em;
+      cursor: pointer;
+    }
+    .zcc-cv-dismiss:hover { background: #d72c0d; color: #fff; }
+    .zcc-checkout-blocked { opacity: 0.4 !important; pointer-events: none !important; cursor: not-allowed !important; }
+    .zcc-checkout-notice {
+      font-size: 0.78em;
+      color: #d72c0d;
+      margin-top: 6px;
+      text-align: center;
+      display: none;
+    }
+  </style>
+
+  <script>
+  (function() {
+    var SHOP = {{ shop_domain | json }};
+    var META_RAW = {{ metafield_value | default: 'null' | json }};
+
+    var cfg = { blockCheckoutInCart: false };
+    try {
+      var meta = META_RAW ? JSON.parse(META_RAW) : null;
+      if (meta) cfg = Object.assign(cfg, meta);
+    } catch(e) {}
+
+    function init() {
+      var wrapper = document.getElementById('zcc-cart-validator');
+      if (!wrapper) return;
+
+      var isValid, zip, storedShop;
+      try {
+        isValid = sessionStorage.getItem('zcc:valid');
+        zip = sessionStorage.getItem('zcc:zip');
+        storedShop = sessionStorage.getItem('zcc:shop');
+      } catch(e) { return; }
+
+      // Only act if the stored validation is for THIS shop
+      if (!isValid || storedShop !== SHOP) return;
+
+      if (isValid === 'false' && zip) {
+        // Show warning banner
+        wrapper.style.display = 'block';
+        wrapper.innerHTML = '<div class="zcc-cv-banner">'
+          + '<span class="zcc-cv-icon">⚠️</span>'
+          + '<div class="zcc-cv-content">'
+          + '<p class="zcc-cv-title">Delivery Not Available for Your Area</p>'
+          + '<p class="zcc-cv-msg">Your ZIP code <span class="zcc-cv-zip">' + zip + '</span> is outside our current delivery area. Please remove restricted items or check a different ZIP code.</p>'
+          + '<div class="zcc-cv-actions">'
+          + '<button class="zcc-cv-dismiss" onclick="document.getElementById(\'zcc-cart-validator\').style.display=\'none\'">Dismiss</button>'
+          + '</div>'
+          + '</div>'
+          + '</div>';
+
+        // Optionally block checkout buttons
+        if (cfg.blockCheckoutInCart) {
+          var CHECKOUT_SELECTORS = [
+            '[name="checkout"]',
+            '.cart__checkout-button',
+            '.cart-checkout-btn',
+            'button[data-action="checkout"]',
+            '.checkout-button',
+            'input[name="checkout"]',
+            '[href="/checkout"]',
+            'a.btn[href*="checkout"]'
+          ];
+
+          CHECKOUT_SELECTORS.forEach(function(sel) {
+            try {
+              document.querySelectorAll(sel).forEach(function(el) {
+                el.classList.add('zcc-checkout-blocked');
+                el.setAttribute('data-zcc-checkout-blocked', 'true');
+                el.setAttribute('title', 'Delivery is not available for ZIP code ' + zip + '. Please update your ZIP code.');
+              });
+            } catch(e) {}
+          });
+
+          // Add notice below checkout buttons
+          var notice = document.createElement('p');
+          notice.className = 'zcc-checkout-notice';
+          notice.style.display = 'block';
+          notice.textContent = 'Checkout unavailable — ZIP code ' + zip + ' is not in our delivery area.';
+          wrapper.appendChild(notice);
+        }
+      }
+    }
+
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // Also listen for zcc:validated events (if widget and cart are on same page)
+    window.addEventListener('zcc:validated', function(e) {
+      try {
+        var detail = e.detail;
+        if (!detail.valid) {
+          sessionStorage.setItem('zcc:valid', 'false');
+          sessionStorage.setItem('zcc:zip', detail.zip);
+        } else {
+          sessionStorage.removeItem('zcc:valid');
+          sessionStorage.removeItem('zcc:zip');
+          var w = document.getElementById('zcc-cart-validator');
+          if (w) w.style.display = 'none';
+          // Re-enable checkout buttons if they were blocked
+          document.querySelectorAll('[data-zcc-checkout-blocked="true"]').forEach(function(el) {
+            el.classList.remove('zcc-checkout-blocked');
+            el.removeAttribute('data-zcc-checkout-blocked');
+            el.removeAttribute('title');
+          });
+        }
+      } catch(e) {}
+    });
+  })();
+  </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Cart Validator",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

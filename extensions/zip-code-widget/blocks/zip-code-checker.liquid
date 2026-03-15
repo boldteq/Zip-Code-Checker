@@ -1,0 +1,610 @@
+{% comment %}
+  Zip Code Checker — Theme App Extension Block
+  Add this block to any section in the Shopify Theme Editor.
+  The block automatically connects to your app — no manual configuration needed.
+{% endcomment %}
+
+{% if request.design_mode %}
+  {% comment %}
+    Theme Editor preview — render a static placeholder so no live API calls
+    are made during theme customization. The real widget loads on the storefront.
+  {% endcomment %}
+  <div style="
+    background:#ffffff;
+    border:1px solid #e1e3e5;
+    border-radius:8px;
+    padding:24px;
+    max-width:480px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    box-sizing:border-box;
+    color:#202223;
+  ">
+    <p style="font-size:16px;font-weight:600;margin:0 0 16px;">Check Delivery Availability</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input
+        type="text"
+        placeholder="Enter your zip code"
+        disabled
+        style="
+          flex:1;padding:10px 12px;border:1px solid #c9cccf;border-radius:8px;
+          font-size:14px;background:#fafbfb;color:#202223;min-width:0;
+        "
+      >
+      <button
+        type="button"
+        disabled
+        style="
+          background:#008060;color:#fff;border:none;border-radius:8px;
+          padding:10px 20px;font-size:14px;font-weight:600;white-space:nowrap;
+          opacity:0.7;cursor:default;
+        "
+      >Check</button>
+    </div>
+    <div style="
+      background:#00806015;border-left:3px solid #008060;border-radius:8px;
+      padding:12px;font-size:14px;color:#008060;line-height:1.4;
+    ">
+      Great news! We deliver to your area.
+      <div style="margin-top:4px;font-size:13px;opacity:0.8;">Estimated delivery: 2-3 business days</div>
+    </div>
+    <p style="margin:12px 0 0;font-size:11px;color:#8c9196;text-align:center;">
+      Zip Code Checker — live widget loads on your storefront
+    </p>
+  </div>
+{% else %}
+
+{% assign zcc_config = app.metafields.zip_checker.widget_config.value %}
+
+<div
+  id="zcc-widget-{{ block.id }}"
+  data-zcc-widget="true"
+  data-shop="{{ shop.permanent_domain }}"
+  data-api="https://{{ shop.permanent_domain }}/apps/zipcheck"
+  data-block="{{ block.id }}"
+  {% if zcc_config %}data-config="{{ zcc_config | json | escape }}"{% endif %}
+  {{ block.shopify_attributes }}
+></div>
+
+<script>
+(function () {
+  // Respect app embed toggle — if app embed block is not enabled in this theme,
+  // window.__zccAppEnabled will be undefined/falsy and we exit early.
+  if (!window.__zccAppEnabled) return;
+
+  var ROOT_ID = "zcc-widget-{{ block.id }}";
+  var container = document.getElementById(ROOT_ID);
+  if (!container) return;
+
+  var SHOP = container.dataset.shop;
+  var API_BASE = (container.dataset.api || "").replace(/\/$/, "");
+
+  // Try embedded config from metafield first (instant, no network needed)
+  var configStr = container.getAttribute("data-config");
+  if (configStr) {
+    try {
+      renderWidget(JSON.parse(configStr));
+      return;
+    } catch (e) {
+      console.warn("[ZipCodeChecker] Failed to parse embedded config, falling back to API");
+    }
+  }
+
+  // Fallback: fetch config from API
+  fetch(API_BASE + "/api/widget-config?shop=" + encodeURIComponent(SHOP))
+    .then(function (r) {
+      if (!r.ok) throw new Error("Widget config API returned " + r.status);
+      return r.json();
+    })
+    .then(function (cfg) { renderWidget(cfg); })
+    .catch(function (err) {
+      console.warn("[ZipCodeChecker] Could not load widget config, using defaults:", err.message || err);
+      renderWidget({});
+    });
+
+  function renderWidget(cfg) {
+    // Merge with defaults
+    var D = {
+      position: "inline",
+      heading: "Check Delivery Availability",
+      placeholder: "Enter your zip code",
+      buttonText: "Check",
+      successMessage: "Great news! We deliver to your area.",
+      errorMessage: "Sorry, we don\u2019t deliver to this area yet.",
+      notFoundMessage: "This zip code was not found in our system.",
+      primaryColor: "#008060",
+      successColor: "#008060",
+      errorColor: "#D72C0D",
+      backgroundColor: "#FFFFFF",
+      textColor: "#202223",
+      borderRadius: "8",
+      showEta: true,
+      showZone: false,
+      showWaitlistOnFailure: false,
+      showCod: true,
+      showReturnPolicy: true,
+      showCutoffTime: true,
+      showDeliveryDays: true,
+      customCss: "",
+      blockCartOnInvalid: false,
+      showSocialProof: true,
+    };
+    Object.keys(D).forEach(function (k) {
+      if (cfg[k] === undefined || cfg[k] === null || cfg[k] === "") cfg[k] = D[k];
+    });
+
+    var rad = cfg.borderRadius + "px";
+    var WID = "zcc-" + ROOT_ID;
+
+    if (cfg.position === "floating") {
+      renderFloating(cfg, WID, rad);
+    } else if (cfg.position === "popup") {
+      renderPopup(cfg, WID, rad);
+    } else {
+      renderInline(cfg, WID, rad);
+    }
+  }
+
+  // ── Shared: inject CSS ──────────────────────────────────────────────────────
+  function injectCss(wid, cfg, rad) {
+    var css =
+      "#" + wid + "{" +
+        "background:" + cfg.backgroundColor + " !important;" +
+        "color:" + cfg.textColor + " !important;" +
+        "border-radius:" + rad + " !important;" +
+        "padding:24px !important;" +
+        "border:1px solid #e1e3e5 !important;" +
+        "max-width:480px;" +
+        "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important;" +
+        "box-sizing:border-box !important;" +
+      "}" +
+      "#" + wid + " *{box-sizing:border-box !important}" +
+      "#" + wid + " .zcc-heading{font-size:16px !important;font-weight:600 !important;margin:0 0 16px !important;color:" + cfg.textColor + " !important}" +
+      "#" + wid + " .zcc-row{display:flex !important;gap:8px !important;margin-bottom:0 !important}" +
+      "#" + wid + " .zcc-input{" +
+        "flex:1 !important;padding:10px 12px !important;border:1px solid #c9cccf !important;" +
+        "border-radius:" + rad + " !important;font-size:14px !important;outline:none !important;" +
+        "background:#fafbfb !important;color:" + cfg.textColor + " !important;min-width:0 !important" +
+      "}" +
+      "#" + wid + " .zcc-input:focus{border-color:" + cfg.primaryColor + " !important;box-shadow:0 0 0 2px " + cfg.primaryColor + "22 !important}" +
+      "#" + wid + " .zcc-btn{" +
+        "background:" + cfg.primaryColor + " !important;color:#fff !important;border:none !important;" +
+        "border-radius:" + rad + " !important;padding:10px 20px !important;font-size:14px !important;" +
+        "font-weight:600 !important;cursor:pointer !important;white-space:nowrap !important;flex-shrink:0 !important" +
+      "}" +
+      "#" + wid + " .zcc-btn:hover{opacity:.9 !important}" +
+      "#" + wid + " .zcc-btn:disabled{opacity:.6 !important;cursor:not-allowed !important}" +
+      "#" + wid + " .zcc-result{margin-top:12px !important;padding:12px !important;border-radius:" + rad + " !important;font-size:14px !important;line-height:1.4 !important}" +
+      "#" + wid + " .zcc-result.ok{background:" + cfg.successColor + "15 !important;border-left:3px solid " + cfg.successColor + " !important;color:" + cfg.successColor + " !important}" +
+      "#" + wid + " .zcc-result.fail{background:" + cfg.errorColor + "15 !important;border-left:3px solid " + cfg.errorColor + " !important;color:" + cfg.errorColor + " !important}" +
+      "#" + wid + " .zcc-meta{margin-top:4px !important;font-size:13px !important;opacity:.8 !important}" +
+      "#" + wid + " .zcc-wl{margin-top:10px !important}" +
+      "#" + wid + " .zcc-wl-input{" +
+        "width:100% !important;padding:8px 10px !important;border:1px solid " + cfg.errorColor + "40 !important;" +
+        "border-radius:" + rad + " !important;font-size:13px !important;margin-bottom:6px !important;display:block !important" +
+      "}" +
+      "#" + wid + " .zcc-wl-btn{" +
+        "background:" + cfg.errorColor + " !important;color:#fff !important;border:none !important;" +
+        "border-radius:" + rad + " !important;padding:8px 16px !important;font-size:13px !important;" +
+        "cursor:pointer !important;width:100% !important;font-weight:600 !important" +
+      "}" +
+      "#" + wid + " .zcc-wl-btn:disabled{opacity:.6 !important;cursor:not-allowed !important}" +
+      "#" + wid + " .zcc-cutoff{margin-top:4px !important;font-size:0.85em !important;color:#6d7175 !important}" +
+      "#" + wid + " .zcc-days{margin-top:4px !important;font-size:0.85em !important;color:#6d7175 !important}" +
+      "#" + wid + " .zcc-cod{margin-top:4px !important;font-size:0.85em !important;font-weight:500 !important}" +
+      "#" + wid + " .zcc-cod--available{color:#008060 !important}" +
+      "#" + wid + " .zcc-cod--unavailable{color:#d72c0d !important}" +
+      "#" + wid + " .zcc-return-policy{margin-top:4px !important;font-size:0.85em !important;color:#6d7175 !important}" +
+      "#" + wid + " .zcc-social-proof{display:block !important;font-size:0.82em !important;color:#6d7175 !important;margin-bottom:8px !important;font-style:italic !important}" +
+      (cfg.customCss || "");
+
+    var styleEl = document.createElement("style");
+    styleEl.textContent = css;
+    document.head.appendChild(styleEl);
+  }
+
+  // ── Shared: build widget inner HTML + wire up events ────────────────────────
+  function buildWidgetInner(wid, cfg, btnLabel) {
+    return (
+      '<p class="zcc-heading">' + esc(cfg.heading) + "</p>" +
+      '<div class="zcc-row">' +
+        '<input class="zcc-input" type="text" id="' + wid + '-inp"' +
+          ' placeholder="' + escAttr(cfg.placeholder) + '"' +
+          ' aria-label="' + escAttr(cfg.placeholder) + '" />' +
+        '<button class="zcc-btn" id="' + wid + '-btn" type="button">' + esc(btnLabel) + "</button>" +
+      "</div>" +
+      '<div id="' + wid + '-res"></div>'
+    );
+  }
+
+  function wireWidget(wid, cfg, API_BASE, SHOP) {
+    var inp = document.getElementById(wid + "-inp");
+    var btn = document.getElementById(wid + "-btn");
+    var res = document.getElementById(wid + "-res");
+    var btnLabel = cfg.buttonText;
+    if (!inp || !btn || !res) return;
+
+    function normalizeZip(raw) {
+      var z = raw.trim().toUpperCase();
+      z = z.replace(/\s+/g, '');        // collapse all spaces (UK: SW1A 2AA → SW1A2AA)
+      z = z.replace(/-\d{4}$/, '');     // strip US ZIP+4 suffix (90210-1234 → 90210)
+      return z;
+    }
+
+    function checkZip() {
+      var zip = normalizeZip(inp.value);
+      inp.value = zip;  // Update the input field to show the normalized value (clean UX)
+      if (!zip) { inp.focus(); return; }
+
+      btn.disabled = true;
+      btn.textContent = "\u2026";
+      res.innerHTML = "";
+
+      fetch(
+        API_BASE + "/api/zip-check?shop=" + encodeURIComponent(SHOP) +
+          "&zip=" + encodeURIComponent(zip)
+      )
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          btn.disabled = false;
+          btn.textContent = btnLabel;
+
+          // Store validation result for cart page
+          try {
+            sessionStorage.setItem('zcc:valid', data.allowed ? 'true' : 'false');
+            sessionStorage.setItem('zcc:zip', zip);
+            sessionStorage.setItem('zcc:shop', SHOP);
+            // Fire custom event for other scripts to listen to
+            window.dispatchEvent(new CustomEvent('zcc:validated', {
+              detail: { valid: data.allowed, zip: zip }
+            }));
+          } catch(e) { /* sessionStorage may be unavailable */ }
+
+          if (data.allowed) {
+            var html = '<div class="zcc-result ok">' + esc(data.message);
+            if (cfg.showEta && data.eta) {
+              html += '<div class="zcc-meta">Estimated delivery: ' + esc(data.eta) + "</div>";
+            }
+            if (cfg.showZone && data.zone) {
+              html += '<div class="zcc-meta">Zone: ' + esc(data.zone) + "</div>";
+            }
+            if (cfg.showDeliveryDays && data.daysOfWeek) {
+              var days = data.daysOfWeek.split(',').map(function(d) { return d.trim(); }).join(' \u00b7 ');
+              html += '<div class="zcc-meta zcc-days">Delivers: ' + esc(days) + '</div>';
+            }
+            if (cfg.showCutoffTime && data.cutoffTime) {
+              var parts = data.cutoffTime.split(':');
+              var hr = parseInt(parts[0], 10);
+              var min = parts[1] || '00';
+              var ampm = hr >= 12 ? 'PM' : 'AM';
+              var hr12 = hr % 12 || 12;
+              html += '<div class="zcc-meta zcc-cutoff">Order by ' + hr12 + ':' + min + ' ' + ampm + ' for same-day delivery</div>';
+            }
+            if (data.codAvailable === true) {
+              html += '<div class="zcc-cod zcc-cod--available">\u2713 Cash on Delivery Available</div>';
+            } else if (data.codAvailable === false) {
+              html += '<div class="zcc-cod zcc-cod--unavailable">\u2717 COD Not Available</div>';
+            }
+            if (data.returnPolicy) {
+              html += '<div class="zcc-return-policy">\u21a9 ' + esc(data.returnPolicy) + '</div>';
+            }
+            html += "</div>";
+            res.innerHTML = html;
+          } else {
+            var html = '<div class="zcc-result fail">' + esc(data.message);
+            if (cfg.showWaitlistOnFailure) {
+              html +=
+                '<div class="zcc-wl">' +
+                '<input class="zcc-wl-input" type="email" id="' + wid + '-wl-email" placeholder="Enter email to join waitlist" />' +
+                '<button class="zcc-wl-btn" id="' + wid + '-wl-btn" type="button">Join Waitlist</button>' +
+                "</div>";
+            }
+            html += "</div>";
+            res.innerHTML = html;
+
+            if (cfg.showWaitlistOnFailure) {
+              // Social proof count — insert before email input
+              if (cfg.showSocialProof && data.waitlistCount && data.waitlistCount > 0) {
+                var wlSection = document.getElementById(wid + "-wl-email");
+                if (wlSection && wlSection.parentNode) {
+                  var spEl = document.createElement('div');
+                  spEl.className = 'zcc-social-proof';
+                  var count = data.waitlistCount;
+                  spEl.textContent = '\uD83D\uDE4B Join ' + count + ' other' + (count !== 1 ? 's' : '') + ' waiting for delivery to your area';
+                  wlSection.parentNode.insertBefore(spEl, wlSection);
+                }
+              }
+
+              var wBtn = document.getElementById(wid + "-wl-btn");
+              if (wBtn) {
+                wBtn.addEventListener("click", function () {
+                  var emailEl = document.getElementById(wid + "-wl-email");
+                  var email = emailEl ? emailEl.value.trim() : "";
+                  if (!email) { if (emailEl) emailEl.focus(); return; }
+                  joinWaitlist(zip, email, wBtn);
+                });
+              }
+            }
+          }
+
+          // Block/unblock Add to Cart based on result (if merchant enabled this)
+          if (cfg.blockCartOnInvalid) {
+            var ATC_SELECTORS = [
+              'button[name="add"]',
+              '.product-form__submit',
+              '[data-product-add]',
+              '.btn--add-to-cart',
+              '.product-form button[type="submit"]',
+              'button.shopify-payment-button__button',
+              '.shopify-payment-button button',
+              'button.product-form__cart-submit'
+            ].join(',');
+
+            try {
+              var atcBtns = document.querySelectorAll(ATC_SELECTORS);
+              atcBtns.forEach(function(b) {
+                if (!b.closest('#zcc-widget, [data-zcc-widget]')) { // Don't touch our own widget's button
+                  if (data.allowed) {
+                    b.disabled = false;
+                    b.style.opacity = '';
+                    b.title = b.getAttribute('data-zcc-orig-title') || '';
+                    b.removeAttribute('data-zcc-orig-title');
+                    b.removeAttribute('data-zcc-blocked');
+                  } else {
+                    b.setAttribute('data-zcc-orig-title', b.title || '');
+                    b.disabled = true;
+                    b.style.opacity = '0.5';
+                    b.title = 'Please enter a valid ZIP code to continue';
+                    b.setAttribute('data-zcc-blocked', 'true');
+                  }
+                }
+              });
+            } catch(e) { /* DOM query may fail in some contexts */ }
+          }
+        })
+        .catch(function () {
+          btn.disabled = false;
+          btn.textContent = btnLabel;
+          res.innerHTML = '<div class="zcc-result fail">Something went wrong. Please try again.</div>';
+          try {
+            sessionStorage.setItem('zcc:valid', 'false');
+            window.dispatchEvent(new CustomEvent('zcc:validated', { detail: { valid: false, zip: zip } }));
+          } catch(e) {}
+        });
+    }
+
+    btn.addEventListener("click", checkZip);
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") checkZip();
+    });
+
+    // Re-enable buttons when customer clears the input
+    inp.addEventListener('input', function() {
+      if (!inp.value.trim() && cfg.blockCartOnInvalid) {
+        try {
+          var blocked = document.querySelectorAll('[data-zcc-blocked="true"]');
+          blocked.forEach(function(b) {
+            b.disabled = false;
+            b.style.opacity = '';
+            b.title = b.getAttribute('data-zcc-orig-title') || '';
+            b.removeAttribute('data-zcc-blocked');
+            b.removeAttribute('data-zcc-orig-title');
+          });
+          sessionStorage.removeItem('zcc:valid');
+          sessionStorage.removeItem('zcc:zip');
+        } catch(e) {}
+      }
+    });
+  }
+
+  function joinWaitlist(zip, email, wBtn) {
+    wBtn.disabled = true;
+    wBtn.textContent = "Joining\u2026";
+
+    fetch(API_BASE + "/api/waitlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shop: SHOP, zip: zip, email: email }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var wlEl = wBtn.closest(".zcc-wl");
+        if (data.success) {
+          if (wlEl) wlEl.innerHTML =
+            '<p style="font-size:13px;margin:6px 0 0">' +
+            "\u2713 You\u2019ve been added to the waitlist!" +
+            "</p>";
+        } else {
+          wBtn.disabled = false;
+          wBtn.textContent = "Join Waitlist";
+        }
+      })
+      .catch(function () {
+        wBtn.disabled = false;
+        wBtn.textContent = "Join Waitlist";
+      });
+  }
+
+  // ── Inline position ─────────────────────────────────────────────────────────
+  function renderInline(cfg, WID, rad) {
+    injectCss(WID, cfg, rad);
+    container.id = WID;
+    container.innerHTML = buildWidgetInner(WID, cfg, cfg.buttonText);
+    wireWidget(WID, cfg, API_BASE, SHOP);
+  }
+
+  // ── Floating position ────────────────────────────────────────────────────────
+  function renderFloating(cfg, WID, rad) {
+    // The original container becomes invisible (just an anchor)
+    container.style.display = "none";
+
+    injectCss(WID, cfg, rad);
+
+    // Additional styles for floating UI
+    var floatCss =
+      "#" + WID + "-float{position:fixed !important;bottom:20px !important;right:20px !important;z-index:9998 !important;display:flex !important;flex-direction:column !important;align-items:flex-end !important;gap:10px !important}" +
+      "#" + WID + "-panel{" +
+        "background:" + cfg.backgroundColor + " !important;border-radius:" + rad + " !important;" +
+        "box-shadow:0 8px 32px rgba(0,0,0,.18) !important;overflow:hidden !important;" +
+        "transition:opacity .2s,transform .2s;transform-origin:bottom right" +
+      "}" +
+      "#" + WID + "-panel.zcc-hidden{display:none !important}" +
+      "#" + WID + "-panel .zcc-panel-header{" +
+        "display:flex !important;align-items:center !important;justify-content:space-between !important;" +
+        "padding:14px 16px 0 !important;margin-bottom:0 !important" +
+      "}" +
+      "#" + WID + "-panel .zcc-panel-close{" +
+        "background:none !important;border:none !important;cursor:pointer !important;font-size:20px !important;line-height:1 !important;" +
+        "color:" + cfg.textColor + " !important;opacity:.6;padding:0 4px !important" +
+      "}" +
+      "#" + WID + "-panel .zcc-panel-close:hover{opacity:1 !important}" +
+      "#" + WID + "-trigger{" +
+        "background:" + cfg.primaryColor + " !important;color:#fff !important;border:none !important;" +
+        "border-radius:50px !important;padding:12px 20px !important;font-size:14px !important;font-weight:600 !important;" +
+        "cursor:pointer !important;box-shadow:0 4px 12px rgba(0,0,0,.2) !important;white-space:nowrap !important" +
+      "}" +
+      "#" + WID + "-trigger:hover{opacity:.9 !important}";
+
+    var floatStyle = document.createElement("style");
+    floatStyle.textContent = floatCss;
+    document.head.appendChild(floatStyle);
+
+    // Build floating shell
+    var floatEl = document.createElement("div");
+    floatEl.id = WID + "-float";
+    floatEl.innerHTML =
+      '<div id="' + WID + '-panel" class="zcc-hidden">' +
+        '<div class="zcc-panel-header">' +
+          '<span style="font-size:13px;font-weight:600;color:' + cfg.textColor + '">Delivery Check</span>' +
+          '<button class="zcc-panel-close" id="' + WID + '-close" type="button" aria-label="Close">&times;</button>' +
+        '</div>' +
+        '<div id="' + WID + '" data-zcc-widget="true">' +
+          buildWidgetInner(WID, cfg, cfg.buttonText) +
+        '</div>' +
+      '</div>' +
+      '<button id="' + WID + '-trigger" type="button">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:6px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+        esc(cfg.buttonText || "Check Delivery") +
+      '</button>';
+
+    document.body.appendChild(floatEl);
+
+    // Wire toggle
+    var trigger = document.getElementById(WID + "-trigger");
+    var panel = document.getElementById(WID + "-panel");
+    var closeBtn = document.getElementById(WID + "-close");
+
+    if (trigger && panel) {
+      trigger.addEventListener("click", function () {
+        panel.classList.toggle("zcc-hidden");
+      });
+    }
+    if (closeBtn && panel) {
+      closeBtn.addEventListener("click", function () {
+        panel.classList.add("zcc-hidden");
+      });
+    }
+    // Close on outside click
+    document.addEventListener("click", function (e) {
+      if (!floatEl.contains(e.target)) {
+        if (panel) panel.classList.add("zcc-hidden");
+      }
+    });
+
+    wireWidget(WID, cfg, API_BASE, SHOP);
+  }
+
+  // ── Popup position ───────────────────────────────────────────────────────────
+  function renderPopup(cfg, WID, rad) {
+    injectCss(WID, cfg, rad);
+
+    var popupCss =
+      "#" + WID + "-overlay{" +
+        "display:none !important;position:fixed !important;inset:0 !important;background:rgba(0,0,0,.55) !important;" +
+        "z-index:9999 !important;align-items:center !important;justify-content:center !important;padding:16px !important" +
+      "}" +
+      "#" + WID + "-overlay.zcc-open{display:flex !important}" +
+      "#" + WID + "-modal{" +
+        "background:" + cfg.backgroundColor + " !important;border-radius:" + rad + " !important;" +
+        "max-width:480px !important;width:100% !important;position:relative !important;" +
+        "box-shadow:0 20px 60px rgba(0,0,0,.3) !important" +
+      "}" +
+      "#" + WID + "-modal .zcc-modal-close{" +
+        "position:absolute !important;top:10px !important;right:14px !important;background:none !important;border:none !important;" +
+        "font-size:22px !important;line-height:1 !important;cursor:pointer !important;color:" + cfg.textColor + " !important;opacity:.5" +
+      "}" +
+      "#" + WID + "-modal .zcc-modal-close:hover{opacity:1 !important}" +
+      "#" + WID + "-popup-trigger{" +
+        "background:" + cfg.primaryColor + " !important;color:#fff !important;border:none !important;" +
+        "border-radius:" + rad + " !important;padding:10px 24px !important;font-size:14px !important;font-weight:600 !important;" +
+        "cursor:pointer !important" +
+      "}" +
+      "#" + WID + "-popup-trigger:hover{opacity:.9 !important}";
+
+    var popupStyle = document.createElement("style");
+    popupStyle.textContent = popupCss;
+    document.head.appendChild(popupStyle);
+
+    // Trigger button renders in-place (inside the block)
+    container.innerHTML =
+      '<button id="' + WID + '-popup-trigger" type="button">' +
+        esc(cfg.heading) +
+      '</button>';
+
+    // Overlay + modal append to body
+    var overlay = document.createElement("div");
+    overlay.id = WID + "-overlay";
+    overlay.innerHTML =
+      '<div id="' + WID + '-modal">' +
+        '<button class="zcc-modal-close" id="' + WID + '-modal-close" type="button" aria-label="Close">&times;</button>' +
+        '<div id="' + WID + '" data-zcc-widget="true">' +
+          buildWidgetInner(WID, cfg, cfg.buttonText) +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var trigger = document.getElementById(WID + "-popup-trigger");
+    var closeBtn = document.getElementById(WID + "-modal-close");
+    var modal = document.getElementById(WID + "-modal");
+
+    function openPopup() { overlay.classList.add("zcc-open"); }
+    function closePopup() { overlay.classList.remove("zcc-open"); }
+
+    if (trigger) trigger.addEventListener("click", openPopup);
+    if (closeBtn) closeBtn.addEventListener("click", closePopup);
+
+    // Close on overlay backdrop click (not modal content)
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) closePopup();
+    });
+
+    // Close on Escape key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closePopup();
+    });
+
+    wireWidget(WID, cfg, API_BASE, SHOP);
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function escAttr(str) {
+    return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
+})();
+</script>
+
+{% endif %}
+
+{% schema %}
+{
+  "name": "Zip Code Checker",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Write",
+      "Read",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run setup)",
+      "Bash(npm run start)",
+      "Bash(npx prisma generate)",
+      "Bash(npx prisma migrate dev*)",
+      "Bash(npx prisma migrate reset*)",
+      "Bash(npx prisma studio)",
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma db seed)",
+      "Bash(npx shopify app deploy)",
+      "Bash(npx shopify app info)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(git push --force*)",
+      "Bash(npx prisma migrate reset --force)"
+    ]
+  },
+  "autoMemoryEnabled": true
+}
