@@ -85,3 +85,4 @@ The app implements all three mandatory GDPR webhooks required by Shopify:
 ## Shopify App Store
 
 This app is designed for submission to the Shopify App Store and follows all [Shopify app requirements](https://shopify.dev/docs/apps/launch/app-requirements).
+# Zip-Code-Checker
