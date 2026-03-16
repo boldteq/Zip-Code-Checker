@@ -47,6 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let activeThemeName: string | null = null;
   let themeEditorUrl = `https://${shop}/admin/themes/current/editor`;
   let themeEditorAppEmbedsUrl = `https://${shop}/admin/themes/current/editor?context=apps`;
+  let debugInfo: string | null = null;
 
   try {
     const themeResponse = await admin.graphql(`{
@@ -82,8 +83,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       };
     };
     const mainTheme = themeData?.data?.themes?.nodes?.[0];
-    if (mainTheme) {
-      // Extract numeric ID from GID (e.g. "gid://shopify/OnlineStoreTheme/123")
+    if (!mainTheme) {
+      debugInfo = "No main theme found via GraphQL";
+    } else {
       const gidParts = mainTheme.id.split("/");
       const numericId = gidParts[gidParts.length - 1];
       activeThemeName = mainTheme.name;
@@ -91,84 +93,61 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       themeEditorAppEmbedsUrl = `https://${shop}/admin/themes/${numericId}/editor?context=apps`;
 
       const content = mainTheme.files?.nodes?.[0]?.body?.content;
-      if (content) {
+      if (!content) {
+        debugInfo = `Theme "${mainTheme.name}" found but settings_data.json is empty or unreadable`;
+      } else {
         /* eslint-disable @typescript-eslint/no-explicit-any */
         const settingsData = JSON.parse(content) as any;
-
-        // Collect all blocks from every possible location in settings_data.json
-        // Themes can structure this as:
-        //   - current.blocks (older themes)
-        //   - current.presets.*.blocks (preset-based themes)
-        //   - Or nested within sections
-        const allBlocks: Record<string, any> = {};
-
-        // Direct blocks at current level
-        if (settingsData?.current?.blocks) {
-          Object.assign(allBlocks, settingsData.current.blocks);
-        }
-
-        // Also scan the entire JSON string for app_embed references
-        // This is the most reliable check — if the content contains our
-        // app embed reference and it's not disabled, it's enabled
-        const contentLower = content.toLowerCase();
         const apiKey = process.env.SHOPIFY_API_KEY ?? "";
 
-        // Method 1: Check parsed blocks
-        if (Object.keys(allBlocks).length > 0) {
-          appEmbedEnabled = Object.entries(allBlocks).some(
-            ([key, block]) => {
-              const b = block as { type?: string; disabled?: boolean };
-              const typeStr = b.type ?? "";
-              const keyStr = key ?? "";
-              const isAppEmbed =
-                typeStr.includes("app-embed") ||
-                typeStr.includes("app_embed");
-              if (!isAppEmbed || b.disabled === true) return false;
-              if (apiKey && (keyStr.includes(apiKey) || typeStr.includes(apiKey))) {
-                return true;
-              }
-              if (
-                keyStr.includes("zip-code") ||
-                typeStr.includes("zip-code") ||
-                keyStr.includes("zip_code") ||
-                typeStr.includes("zip_code")
-              ) {
-                return true;
-              }
-              return false;
-            },
-          );
+        // Collect all block keys from settings_data.json for debugging
+        const blocks = settingsData?.current?.blocks ?? {};
+        const blockKeys = Object.keys(blocks);
+        const embedBlocks = Object.entries(blocks).filter(([, block]) => {
+          const b = block as { type?: string };
+          const t = b.type ?? "";
+          return t.includes("app_embed") || t.includes("app-embed");
+        });
+
+        // Check each embed block
+        for (const [key, block] of embedBlocks) {
+          const b = block as { type?: string; disabled?: boolean };
+          if (b.disabled === true) continue;
+          const typeStr = b.type ?? "";
+          const keyStr = key;
+          // Match by API key or app handle
+          if (
+            (apiKey && (keyStr.includes(apiKey) || typeStr.includes(apiKey))) ||
+            keyStr.includes("zip-code") || typeStr.includes("zip-code") ||
+            keyStr.includes("zip_code") || typeStr.includes("zip_code")
+          ) {
+            appEmbedEnabled = true;
+            break;
+          }
         }
 
-        // Method 2: Fallback — scan the raw JSON for app_embed with our identifiers
+        // Fallback: raw string scan
         if (!appEmbedEnabled) {
-          const hasAppEmbed = contentLower.includes("app_embed") || contentLower.includes("app-embed");
+          const contentLower = content.toLowerCase();
+          const hasEmbed = contentLower.includes("app_embed");
           const hasOurApp =
             (apiKey && contentLower.includes(apiKey.toLowerCase())) ||
             contentLower.includes("zip-code-checker") ||
-            contentLower.includes("zip_code_checker") ||
             contentLower.includes("zip-code-widget");
-          // Check it's not disabled — look for our embed block not having "disabled":true
-          if (hasAppEmbed && hasOurApp) {
-            // If we find our app embed reference, check it's not explicitly disabled
-            const disabledPattern = /"disabled"\s*:\s*true/;
-            // Find all app_embed blocks related to our app
-            const embedRegex = /("type"\s*:\s*"[^"]*app[_-]embed[^"]*"[^}]*"disabled"\s*:\s*true)/gi;
-            const disabledEmbeds = content.match(embedRegex) ?? [];
-            const ourDisabled = disabledEmbeds.some(
-              (match) =>
-                match.includes("zip-code") ||
-                match.includes("zip_code") ||
-                (apiKey && match.includes(apiKey)),
-            );
-            appEmbedEnabled = !ourDisabled;
+          if (hasEmbed && hasOurApp) {
+            // Check not disabled
+            const notDisabled = !contentLower.includes('"disabled":true');
+            if (notDisabled) appEmbedEnabled = true;
           }
         }
+
+        // Debug info
+        debugInfo = `Theme: ${mainTheme.name} | API Key: ${apiKey || "(empty)"} | Total blocks: ${blockKeys.length} | Embed blocks: ${embedBlocks.length} | Embed block types: ${embedBlocks.map(([k, b]) => `${k.substring(0, 60)}... (disabled=${(b as any).disabled})`).join("; ") || "none"} | Result: ${appEmbedEnabled}`;
         /* eslint-enable @typescript-eslint/no-explicit-any */
       }
     }
-  } catch {
-    // Non-fatal — embed status defaults to false
+  } catch (err) {
+    debugInfo = `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
 
   return {
@@ -178,6 +157,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     activeThemeName,
     themeEditorUrl,
     themeEditorAppEmbedsUrl,
+    debugInfo,
   };
 };
 
@@ -189,6 +169,7 @@ export default function DashboardPage() {
     activeThemeName,
     themeEditorUrl,
     themeEditorAppEmbedsUrl,
+    debugInfo,
   } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const { revalidate, state: revalidateState } = useRevalidator();
@@ -276,6 +257,13 @@ export default function DashboardPage() {
                   <strong>Zip Code Checker</strong> block, and save
                 </List.Item>
               </List>
+            </Banner>
+          )}
+
+          {/* Debug info for embed detection (temporary) */}
+          {debugInfo && (
+            <Banner tone="info" title="Embed Detection Debug">
+              <Text as="p" variant="bodySm">{debugInfo}</Text>
             </Banner>
           )}
 
