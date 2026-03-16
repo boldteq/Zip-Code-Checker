@@ -21,8 +21,8 @@ import {
   InlineGrid,
   Text,
   Button,
+  ButtonGroup,
   TextField,
-  Select,
   Checkbox,
   Divider,
   Box,
@@ -651,11 +651,6 @@ const WidgetPreview = memo(function WidgetPreview({
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
     </svg>
   );
-  const searchIcon = (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:16,height:16,verticalAlign:"middle",marginRight:4}}>
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-  );
   const checkIcon = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>
@@ -696,7 +691,9 @@ const WidgetPreview = memo(function WidgetPreview({
           readOnly
         />
         <button className="zcc-btn" type="button">
-          {searchIcon}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:14,height:14,verticalAlign:"middle",marginRight:3,flexShrink:0}}>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
           {cfg.buttonText}
         </button>
       </div>
@@ -1530,13 +1527,18 @@ export default function WidgetPage() {
               <div style={{ position: "sticky", top: "16px", alignSelf: "start" }}>
                 <Card>
                   <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">
-                      Live Preview
-                    </Text>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="h2" variant="headingMd">
+                        Live Preview
+                      </Text>
+                      <Badge tone={position === "floating" ? "attention" : position === "popup" ? "info" : "success"}>
+                        {position === "floating" ? "Floating" : position === "popup" ? "Popup" : "Inline"}
+                      </Badge>
+                    </InlineStack>
                     <Divider />
 
-                    {/* Preview toggle buttons */}
-                    <InlineStack gap="200" wrap>
+                    {/* Preview state toggle */}
+                    <ButtonGroup variant="segmented">
                       <Button
                         size="slim"
                         pressed={previewState === "idle"}
@@ -1565,22 +1567,16 @@ export default function WidgetPage() {
                       >
                         Not Found
                       </Button>
-                    </InlineStack>
+                    </ButtonGroup>
 
                     {/* Preview widget */}
                     <Box
                       padding="400"
                       background="bg-surface-secondary"
                       borderRadius="200"
-                      minHeight="500px"
                     >
                       <WidgetPreview cfg={previewCfg} previewState={previewState} />
                     </Box>
-
-                    <Text as="p" tone="subdued" variant="bodySm">
-                      Preview reflects all current settings including custom CSS.
-                      Click state buttons above to see different scenarios.
-                    </Text>
                   </BlockStack>
                 </Card>
               </div>
