@@ -22,6 +22,7 @@ import {
   cancelShopSubscription,
   getShopSubscription,
 } from "../billing.server";
+import db from "../db.server";
 import {
   Page,
   Layout,
@@ -137,10 +138,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop,
       billingCheck.appSubscriptions ?? [],
     );
-    return { subscription };
+    const isDev = process.env.NODE_ENV !== "production";
+    return { subscription, isDev };
   } catch {
     const subscription = await getShopSubscription(shop);
-    return { subscription };
+    const isDev = process.env.NODE_ENV !== "production";
+    return { subscription, isDev };
   }
 };
 
@@ -188,6 +191,37 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<
         error: `Failed to initiate subscription: ${message}`,
       };
     }
+  }
+
+  // Dev-only: directly set plan in database without Shopify billing
+  if (intent === "test-set-plan") {
+    if (process.env.NODE_ENV === "production") {
+      return { error: "Test mode is not available in production." };
+    }
+    const tier = String(formData.get("tier")) as import("../plans").PlanTier;
+    const validTiers = ["free", "starter", "pro", "ultimate"];
+    if (!validTiers.includes(tier)) {
+      return { error: `Invalid plan tier: ${tier}` };
+    }
+    await db.subscription.upsert({
+      where: { shop },
+      create: {
+        shop,
+        planId: tier === "free" ? "free" : `${tier.charAt(0).toUpperCase() + tier.slice(1)} Monthly`,
+        billingInterval: "monthly",
+        status: "active",
+      },
+      update: {
+        planId: tier === "free" ? "free" : `${tier.charAt(0).toUpperCase() + tier.slice(1)} Monthly`,
+        billingInterval: "monthly",
+        status: "active",
+        shopifySubscriptionId: null,
+      },
+    });
+    return {
+      success: true,
+      message: `Plan set to ${tier.charAt(0).toUpperCase() + tier.slice(1)} (test mode).`,
+    };
   }
 
   if (intent === "cancel") {
@@ -376,7 +410,7 @@ function PlanCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const { subscription } = useLoaderData<typeof loader>();
+  const { subscription, isDev } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const shopify = useAppBridge();
@@ -547,6 +581,35 @@ export default function PricingPage() {
                 All paid plans include a 7-day free trial. No credit card
                 charged until the trial ends.
               </Text>
+            )}
+
+            {/* Dev-only: Test mode to set plan directly */}
+            {isDev && (
+              <Banner tone="warning" title="Developer Test Mode">
+                <BlockStack gap="300">
+                  <Text as="p" variant="bodySm">
+                    Set plan directly in the database (dev only — not visible in production):
+                  </Text>
+                  <InlineStack gap="200">
+                    {(["free", "starter", "pro", "ultimate"] as const).map((tier) => (
+                      <Button
+                        key={tier}
+                        size="slim"
+                        variant={currentTier === tier ? "primary" : "secondary"}
+                        disabled={currentTier === tier}
+                        onClick={() => {
+                          const fd = new FormData();
+                          fd.set("intent", "test-set-plan");
+                          fd.set("tier", tier);
+                          fetcher.submit(fd, { method: "POST" });
+                        }}
+                      >
+                        {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                      </Button>
+                    ))}
+                  </InlineStack>
+                </BlockStack>
+              </Banner>
             )}
 
           </BlockStack>
