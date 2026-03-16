@@ -18,7 +18,6 @@ import {
   PLAN_ULTIMATE_ANNUAL,
 } from "../plans";
 import {
-  syncSubscriptionFromShopify,
   cancelShopSubscription,
   getShopSubscription,
 } from "../billing.server";
@@ -124,25 +123,10 @@ const PLANS_DATA = {
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session, billing } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   const shop = session.shop;
-
-  try {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const billingCheck = await billing.check({
-      plans: ALL_PAID_PLANS as any,
-      isTest: process.env.NODE_ENV !== "production",
-    });
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-    const subscription = await syncSubscriptionFromShopify(
-      shop,
-      billingCheck.appSubscriptions ?? [],
-    );
-    return { subscription };
-  } catch {
-    const subscription = await getShopSubscription(shop);
-    return { subscription };
-  }
+  const subscription = await getShopSubscription(shop);
+  return { subscription };
 };
 
 // ─── Action ───────────────────────────────────────────────────────────────────
