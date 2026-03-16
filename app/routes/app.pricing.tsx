@@ -138,12 +138,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop,
       billingCheck.appSubscriptions ?? [],
     );
-    const isDev = process.env.NODE_ENV !== "production";
-    return { subscription, isDev };
+    return { subscription, isDev: true };
   } catch {
     const subscription = await getShopSubscription(shop);
-    const isDev = process.env.NODE_ENV !== "production";
-    return { subscription, isDev };
+    return { subscription, isDev: true };
   }
 };
 
@@ -193,11 +191,8 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<
     }
   }
 
-  // Dev-only: directly set plan in database without Shopify billing
+  // Test mode: directly set plan in database without Shopify billing
   if (intent === "test-set-plan") {
-    if (process.env.NODE_ENV === "production") {
-      return { error: "Test mode is not available in production." };
-    }
     const tier = String(formData.get("tier")) as import("../plans").PlanTier;
     const validTiers = ["free", "starter", "pro", "ultimate"];
     if (!validTiers.includes(tier)) {
