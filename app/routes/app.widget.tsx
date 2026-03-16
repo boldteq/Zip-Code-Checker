@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, memo } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -398,7 +398,7 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
 }
 
 // ── Live Preview component (defined outside WidgetPage to avoid remounting) ─
-function WidgetPreview({
+const WidgetPreview = memo(function WidgetPreview({
   cfg,
   previewState,
 }: {
@@ -406,7 +406,7 @@ function WidgetPreview({
   previewState: "idle" | "success" | "error" | "notfound";
 }) {
   const wid = "zcc-admin-preview";
-  const css = buildWidgetCss(wid, cfg);
+  const css = useMemo(() => buildWidgetCss(wid, cfg), [wid, cfg]);
 
   const resultClass =
     previewState === "success" ? "ok" :
@@ -657,7 +657,63 @@ function WidgetPreview({
       {widgetHtml}
     </>
   );
-}
+});
+
+// ── Reusable position tile selector ─────────────────────────────────────────
+const PositionTile = memo(function PositionTile({
+  value,
+  label,
+  selected,
+  disabled,
+  onSelect,
+  children,
+}: {
+  value: string;
+  label: string;
+  selected: boolean;
+  disabled: boolean;
+  onSelect: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={() => !disabled && onSelect(value)}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && !disabled) {
+          e.preventDefault();
+          onSelect(value);
+        }
+      }}
+      style={{
+        flex: 1,
+        minWidth: 100,
+        border: selected
+          ? "2px solid var(--p-color-border-emphasis)"
+          : "2px solid var(--p-color-border-secondary)",
+        borderRadius: 10,
+        padding: "12px 10px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: selected
+          ? "var(--p-color-bg-surface-selected)"
+          : "var(--p-color-bg-surface)",
+        textAlign: "center" as const,
+        opacity: disabled ? 0.5 : 1,
+        transition: "border-color 0.15s ease, background 0.15s ease",
+        outline: "none",
+      }}
+    >
+      <BlockStack gap="100" inlineAlign="center">
+        {children}
+        <Text as="p" variant="bodySm" fontWeight={selected ? "semibold" : "regular"}>
+          {label}
+        </Text>
+      </BlockStack>
+    </div>
+  );
+});
 
 // ── Page component ───────────────────────────────────────────────────────────
 export default function WidgetPage() {
@@ -835,14 +891,20 @@ export default function WidgetPage() {
     { label: "Popup — trigger button opens a modal", value: "popup" },
   ];
 
-  // Current config snapshot for the preview
-  const previewCfg: WidgetConfig = {
+  // Current config snapshot for the preview (memoized to avoid re-renders)
+  const previewCfg: WidgetConfig = useMemo(() => ({
     position, primaryColor, successColor, errorColor, backgroundColor,
     textColor, heading, placeholder, buttonText, successMessage, errorMessage,
     notFoundMessage, showEta, showZone, showWaitlistOnFailure, showCod,
     showReturnPolicy, showCutoffTime, showDeliveryDays, blockCartOnInvalid,
     blockCheckoutInCart, showSocialProof, borderRadius, widgetStyle, customCss,
-  };
+  }), [
+    position, primaryColor, successColor, errorColor, backgroundColor,
+    textColor, heading, placeholder, buttonText, successMessage, errorMessage,
+    notFoundMessage, showEta, showZone, showWaitlistOnFailure, showCod,
+    showReturnPolicy, showCutoffTime, showDeliveryDays, blockCartOnInvalid,
+    blockCheckoutInCart, showSocialProof, borderRadius, widgetStyle, customCss,
+  ]);
 
   const handleDiscard = useCallback(() => {
     setPosition(c.position);
@@ -914,90 +976,24 @@ export default function WidgetPage() {
                       )}
                     </InlineStack>
                     <InlineStack gap="200" wrap>
-                      {/* Inline */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => limits.widgetFullCustom && handlePositionChange("inline")}
-                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("inline")}
-                        style={{
-                          flex: 1,
-                          minWidth: 100,
-                          border: position === "inline" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
-                          borderRadius: 10,
-                          padding: "12px 10px",
-                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
-                          background: position === "inline" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
-                          textAlign: "center" as const,
-                          opacity: limits.widgetFullCustom ? 1 : 0.5,
-                          transition: "all 0.15s ease",
-                          outline: "none",
-                        }}
-                      >
-                        <BlockStack gap="100" inlineAlign="center">
-                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
-                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                            <rect x="8" y="12" width="16" height="8" rx="2" fill={position === "inline" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.6"/>
-                          </svg>
-                          <Text as="p" variant="bodySm" fontWeight={position === "inline" ? "semibold" : "regular"}>Inline</Text>
-                        </BlockStack>
-                      </div>
-                      {/* Floating */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => limits.widgetFullCustom && handlePositionChange("floating")}
-                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("floating")}
-                        style={{
-                          flex: 1,
-                          minWidth: 100,
-                          border: position === "floating" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
-                          borderRadius: 10,
-                          padding: "12px 10px",
-                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
-                          background: position === "floating" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
-                          textAlign: "center" as const,
-                          opacity: limits.widgetFullCustom ? 1 : 0.5,
-                          transition: "all 0.15s ease",
-                          outline: "none",
-                        }}
-                      >
-                        <BlockStack gap="100" inlineAlign="center">
-                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
-                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                            <circle cx="24" cy="24" r="5" fill={position === "floating" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.7"/>
-                          </svg>
-                          <Text as="p" variant="bodySm" fontWeight={position === "floating" ? "semibold" : "regular"}>Floating</Text>
-                        </BlockStack>
-                      </div>
-                      {/* Popup */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => limits.widgetFullCustom && handlePositionChange("popup")}
-                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("popup")}
-                        style={{
-                          flex: 1,
-                          minWidth: 100,
-                          border: position === "popup" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
-                          borderRadius: 10,
-                          padding: "12px 10px",
-                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
-                          background: position === "popup" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
-                          textAlign: "center" as const,
-                          opacity: limits.widgetFullCustom ? 1 : 0.5,
-                          transition: "all 0.15s ease",
-                          outline: "none",
-                        }}
-                      >
-                        <BlockStack gap="100" inlineAlign="center">
-                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
-                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                            <rect x="9" y="9" width="14" height="14" rx="3" stroke={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} strokeWidth="1.5" fill={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.5"/>
-                          </svg>
-                          <Text as="p" variant="bodySm" fontWeight={position === "popup" ? "semibold" : "regular"}>Popup</Text>
-                        </BlockStack>
-                      </div>
+                      <PositionTile value="inline" label="Inline" selected={position === "inline"} disabled={!limits.widgetFullCustom} onSelect={handlePositionChange}>
+                        <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                          <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                          <rect x="8" y="12" width="16" height="8" rx="2" fill={position === "inline" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.6"/>
+                        </svg>
+                      </PositionTile>
+                      <PositionTile value="floating" label="Floating" selected={position === "floating"} disabled={!limits.widgetFullCustom} onSelect={handlePositionChange}>
+                        <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                          <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                          <circle cx="24" cy="24" r="5" fill={position === "floating" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.7"/>
+                        </svg>
+                      </PositionTile>
+                      <PositionTile value="popup" label="Popup" selected={position === "popup"} disabled={!limits.widgetFullCustom} onSelect={handlePositionChange}>
+                        <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                          <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                          <rect x="9" y="9" width="14" height="14" rx="3" stroke={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} strokeWidth="1.5" fill={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.5"/>
+                        </svg>
+                      </PositionTile>
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
                       {position === "floating"
@@ -1121,8 +1117,8 @@ export default function WidgetPage() {
                               style={{
                                 width: "36px",
                                 height: "36px",
-                                border: "1px solid #ccc",
-                                borderRadius: "6px",
+                                border: "2px solid var(--p-color-border-secondary)",
+                                borderRadius: "var(--p-border-radius-200)",
                                 cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
                                 padding: "2px",
                                 opacity: limits.widgetFullCustom ? 1 : 0.5,
@@ -1153,8 +1149,8 @@ export default function WidgetPage() {
                               style={{
                                 width: "36px",
                                 height: "36px",
-                                border: "1px solid #ccc",
-                                borderRadius: "6px",
+                                border: "2px solid var(--p-color-border-secondary)",
+                                borderRadius: "var(--p-border-radius-200)",
                                 cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
                                 padding: "2px",
                                 opacity: limits.widgetFullCustom ? 1 : 0.5,
@@ -1187,8 +1183,8 @@ export default function WidgetPage() {
                               style={{
                                 width: "36px",
                                 height: "36px",
-                                border: "1px solid #ccc",
-                                borderRadius: "6px",
+                                border: "2px solid var(--p-color-border-secondary)",
+                                borderRadius: "var(--p-border-radius-200)",
                                 cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
                                 padding: "2px",
                                 opacity: limits.widgetFullCustom ? 1 : 0.5,
@@ -1219,8 +1215,8 @@ export default function WidgetPage() {
                               style={{
                                 width: "36px",
                                 height: "36px",
-                                border: "1px solid #ccc",
-                                borderRadius: "6px",
+                                border: "2px solid var(--p-color-border-secondary)",
+                                borderRadius: "var(--p-border-radius-200)",
                                 cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
                                 padding: "2px",
                                 opacity: limits.widgetFullCustom ? 1 : 0.5,
@@ -1251,8 +1247,8 @@ export default function WidgetPage() {
                           style={{
                             width: "36px",
                             height: "36px",
-                            border: "1px solid #ccc",
-                            borderRadius: "6px",
+                            border: "2px solid var(--p-color-border-secondary)",
+                            borderRadius: "var(--p-border-radius-200)",
                             cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
                             padding: "2px",
                             opacity: limits.widgetFullCustom ? 1 : 0.5,
@@ -1306,24 +1302,20 @@ export default function WidgetPage() {
                       onChange={handleHeadingChange}
                       autoComplete="off"
                     />
-                    <InlineStack gap="300">
-                      <div style={{ flex: 1 }}>
-                        <TextField
-                          label="Placeholder"
-                          value={placeholder}
-                          onChange={handlePlaceholderChange}
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <TextField
-                          label="Button Text"
-                          value={buttonText}
-                          onChange={handleButtonTextChange}
-                          autoComplete="off"
-                        />
-                      </div>
-                    </InlineStack>
+                    <InlineGrid columns={2} gap="300">
+                      <TextField
+                        label="Placeholder"
+                        value={placeholder}
+                        onChange={handlePlaceholderChange}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="Button Text"
+                        value={buttonText}
+                        onChange={handleButtonTextChange}
+                        autoComplete="off"
+                      />
+                    </InlineGrid>
                     <TextField
                       label="Success Message"
                       value={successMessage}
@@ -1547,6 +1539,7 @@ export default function WidgetPage() {
                       padding="400"
                       background="bg-surface-secondary"
                       borderRadius="200"
+                      minHeight="500px"
                     >
                       <WidgetPreview cfg={previewCfg} previewState={previewState} />
                     </Box>
