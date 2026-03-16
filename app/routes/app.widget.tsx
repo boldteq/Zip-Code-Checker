@@ -28,6 +28,7 @@ import {
   Box,
   Banner,
   Badge,
+  Modal,
 } from "@shopify/polaris";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -552,6 +553,9 @@ export default function WidgetPage() {
     "idle" | "success" | "error" | "notfound"
   >("idle");
 
+  // Reset confirmation modal
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+
   const isSaving =
     fetcher.state !== "idle" && fetcher.formData?.get("intent") === "save";
 
@@ -634,7 +638,7 @@ export default function WidgetPage() {
     fetcher, shopify,
   ]);
 
-  const handleReset = useCallback(() => {
+  const handleResetConfirm = useCallback(() => {
     const fd = new FormData();
     fd.set("intent", "reset");
     fetcher.submit(fd, { method: "POST" });
@@ -664,6 +668,7 @@ export default function WidgetPage() {
     setCustomCss(DEFAULTS.customCss);
     setPreviewState("idle");
     setIsDirty(false);
+    setResetModalOpen(false);
     shopify.toast.show("Widget settings reset to defaults");
   }, [fetcher, shopify]);
 
@@ -728,7 +733,7 @@ export default function WidgetPage() {
         }] : []),
         {
           content: "Reset to Defaults",
-          onAction: handleReset,
+          onAction: () => setResetModalOpen(true),
         },
       ]}
     >
@@ -1247,6 +1252,31 @@ export default function WidgetPage() {
           </Layout.Section>
         </Layout>
       </Box>
+      {/* Reset Confirmation Modal */}
+      <Modal
+        open={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        title="Reset to default settings?"
+        primaryAction={{
+          content: "Reset to Defaults",
+          onAction: handleResetConfirm,
+          destructive: true,
+        }}
+        secondaryActions={[
+          {
+            content: "Cancel",
+            onAction: () => setResetModalOpen(false),
+          },
+        ]}
+      >
+        <Modal.Section>
+          <Text as="p" variant="bodyMd">
+            This will erase all your current widget customizations (colors,
+            messages, toggles, custom CSS) and restore the original default
+            settings. This action cannot be undone.
+          </Text>
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }
