@@ -82,7 +82,7 @@ async function handleZipCheck(shop: string | null, zip: string | null) {
   if (!zipRecord || !zipRecord.isActive) {
     const notFoundMsg =
       widgetConfig?.notFoundMessage ??
-      "This zip code was not found in our system.";
+      "We currently do not ship to this ZIP code.";
 
     // If the zip is simply not in the list (not inactive) and the merchant
     // has set defaultBehavior to "allow", treat it as an allowed zip

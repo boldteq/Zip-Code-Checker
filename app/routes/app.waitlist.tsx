@@ -56,6 +56,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const stats = {
     total: entries.length,
     waiting: entries.filter((e) => e.status === "waiting").length,
+    accepted: entries.filter((e) => e.status === "accepted").length,
+    rejected: entries.filter((e) => e.status === "rejected").length,
     notified: entries.filter((e) => e.status === "notified").length,
     converted: entries.filter((e) => e.status === "converted").length,
     uniqueZips: [...new Set(entries.map((e) => e.zipCode))].length,
@@ -174,11 +176,53 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return { success: true, action: "deleted-notified", count: deleted.count };
   }
 
+  if (intent === "accept") {
+    const id = String(formData.get("id"));
+    const entry = await db.waitlistEntry.findUnique({ where: { id } });
+    if (!entry || entry.shop !== shop) {
+      return { error: "Entry not found." };
+    }
+
+    // Add the ZIP code to the allowed list
+    await db.zipCode.upsert({
+      where: { shop_zipCode: { shop, zipCode: entry.zipCode } },
+      create: {
+        shop,
+        zipCode: entry.zipCode,
+        type: "allowed",
+        isActive: true,
+        label: `Requested by ${entry.name || entry.email}`,
+      },
+      update: {
+        type: "allowed",
+        isActive: true,
+      },
+    });
+
+    // Mark the waitlist entry as accepted
+    await db.waitlistEntry.update({
+      where: { id },
+      data: { status: "accepted" },
+    });
+
+    return { success: true, action: "accepted", zipCode: entry.zipCode };
+  }
+
+  if (intent === "reject") {
+    const id = String(formData.get("id"));
+    await db.waitlistEntry.update({
+      where: { id },
+      data: { status: "rejected" },
+    });
+    return { success: true, action: "rejected" };
+  }
+
   return null;
 };
 
 type WaitlistEntry = {
   id: string;
+  name: string | null;
   email: string;
   zipCode: string;
   note: string | null;
@@ -330,6 +374,28 @@ export default function WaitlistPage() {
     shopify.toast.show("Notified entries cleared");
   }, [fetcher, shopify]);
 
+  const handleAccept = useCallback(
+    (id: string) => {
+      const fd = new FormData();
+      fd.set("intent", "accept");
+      fd.set("id", id);
+      fetcher.submit(fd, { method: "POST" });
+      shopify.toast.show("ZIP code accepted and added to allowed list");
+    },
+    [fetcher, shopify],
+  );
+
+  const handleReject = useCallback(
+    (id: string) => {
+      const fd = new FormData();
+      fd.set("intent", "reject");
+      fd.set("id", id);
+      fetcher.submit(fd, { method: "POST" });
+      shopify.toast.show("Request rejected");
+    },
+    [fetcher, shopify],
+  );
+
   // Compute per-ZIP waiting counts for the "Notify Waitlist" section
   const zipWaitingCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -381,6 +447,8 @@ export default function WaitlistPage() {
 
   const statusOptions = [
     { label: "Waiting", value: "waiting" },
+    { label: "Accepted", value: "accepted" },
+    { label: "Rejected", value: "rejected" },
     { label: "Notified", value: "notified" },
     { label: "Converted", value: "converted" },
   ];
@@ -388,6 +456,8 @@ export default function WaitlistPage() {
   const filterOptions = [
     { label: "All", value: "all" },
     { label: "Waiting", value: "waiting" },
+    { label: "Accepted", value: "accepted" },
+    { label: "Rejected", value: "rejected" },
     { label: "Notified", value: "notified" },
     { label: "Converted", value: "converted" },
   ];
@@ -402,9 +472,14 @@ export default function WaitlistPage() {
   };
 
   const tableRows = paginatedEntries.map((entry) => [
-    <Text as="span" fontWeight="semibold" key={`email-${entry.id}`}>
-      {entry.email}
-    </Text>,
+    <BlockStack gap="050" key={`name-${entry.id}`}>
+      <Text as="span" fontWeight="semibold">
+        {entry.name || "—"}
+      </Text>
+      <Text as="span" variant="bodySm" tone="subdued">
+        {entry.email}
+      </Text>
+    </BlockStack>,
     <Text as="span" fontWeight="bold" key={`zip-${entry.id}`}>
       {entry.zipCode}
     </Text>,
@@ -417,22 +492,41 @@ export default function WaitlistPage() {
         onChange={(val) => handleStatusChange(entry.id, val)}
       />
     </div>,
-    entry.note || (
-      <Text as="span" tone="subdued">
-        —
-      </Text>
-    ),
     formatDate(entry.createdAt),
-    <Tooltip content="Remove from waitlist" key={`del-${entry.id}`}>
-      <Button
-        size="slim"
-        variant="tertiary"
-        tone="critical"
-        onClick={() => handleDelete(entry.id)}
-        icon={DeleteIcon}
-        accessibilityLabel="Delete"
-      />
-    </Tooltip>,
+    <InlineStack gap="200" key={`actions-${entry.id}`} wrap={false}>
+      {entry.status === "waiting" && (
+        <>
+          <Tooltip content="Accept — adds ZIP to allowed list">
+            <Button
+              size="slim"
+              tone="success"
+              onClick={() => handleAccept(entry.id)}
+            >
+              Accept
+            </Button>
+          </Tooltip>
+          <Tooltip content="Reject this request">
+            <Button
+              size="slim"
+              tone="critical"
+              onClick={() => handleReject(entry.id)}
+            >
+              Reject
+            </Button>
+          </Tooltip>
+        </>
+      )}
+      <Tooltip content="Remove from waitlist">
+        <Button
+          size="slim"
+          variant="tertiary"
+          tone="critical"
+          onClick={() => handleDelete(entry.id)}
+          icon={DeleteIcon}
+          accessibilityLabel="Delete"
+        />
+      </Tooltip>
+    </InlineStack>,
   ]);
 
   return (
@@ -719,13 +813,11 @@ export default function WaitlistPage() {
                     "text",
                     "text",
                     "text",
-                    "text",
                   ]}
                   headings={[
-                    "Email",
+                    "Customer",
                     "Zip Code",
                     "Status",
-                    "Note",
                     "Date",
                     "Actions",
                   ]}

@@ -886,11 +886,7 @@ export default function ZipCodeCheckerPage() {
               title="Unlock more zip codes, blocked zones & CSV tools"
               tone="info"
               action={{
-                content: "Upgrade to Starter",
-                onAction: () => navigate("/app/pricing"),
-              }}
-              secondaryAction={{
-                content: "See all plans",
+                content: "View Plans",
                 onAction: () => navigate("/app/pricing"),
               }}
             >
@@ -912,11 +908,7 @@ export default function ZipCodeCheckerPage() {
               title="Unlock unlimited zip codes, blocked zones & CSV export"
               tone="info"
               action={{
-                content: "Upgrade to Pro",
-                onAction: () => navigate("/app/pricing"),
-              }}
-              secondaryAction={{
-                content: "See all plans",
+                content: "View Plans",
                 onAction: () => navigate("/app/pricing"),
               }}
             >

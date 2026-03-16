@@ -31,7 +31,7 @@ const DEFAULTS = {
   buttonText: "Check",
   successMessage: "Great news! We deliver to your area.",
   errorMessage: "Sorry, we don't deliver to this area yet.",
-  notFoundMessage: "This zip code was not found in our system.",
+  notFoundMessage: "We currently do not ship to this ZIP code.",
   showEta: true,
   showZone: false,
   showWaitlistOnFailure: false,

@@ -60,12 +60,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   let shop: string | null = null;
   let zip: string | null = null;
   let email: string | null = null;
+  let name: string | null = null;
 
   try {
     const body = await request.json();
     shop = body?.shop ?? null;
     zip = body?.zip ?? null;
     email = body?.email ?? null;
+    name = body?.name ?? null;
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
@@ -138,6 +140,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       create: {
         shop,
         email,
+        name: name ? name.trim().substring(0, 100) : null,
         zipCode: normalizeZipCode(zip),
         status: "waiting",
       },

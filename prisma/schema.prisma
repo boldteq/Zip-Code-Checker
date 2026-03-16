@@ -76,10 +76,11 @@ model DeliveryRule {
 model WaitlistEntry {
   id        String   @id @default(cuid())
   shop      String
+  name      String?
   email     String
   zipCode   String
   note      String?
-  status    String   @default("waiting") // waiting, notified, converted
+  status    String   @default("waiting") // waiting, accepted, rejected, notified, converted
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -104,7 +105,7 @@ model WidgetConfig {
   buttonText            String  @default("Check")
   successMessage        String  @default("Great news! We deliver to your area.")
   errorMessage          String  @default("Sorry, we don't deliver to this area yet.")
-  notFoundMessage       String  @default("This zip code was not found in our system.")
+  notFoundMessage       String  @default("We currently do not ship to this ZIP code.")
   // Features
   showEta               Boolean @default(true)
   showZone              Boolean @default(false)

@@ -13,6 +13,8 @@ import {
   List,
   Divider,
   Box,
+  Badge,
+  Banner,
 } from "@shopify/polaris";
 
 // ---------------------------------------------------------------------------
@@ -129,38 +131,67 @@ export default function HelpPage() {
           </Layout.Section>
 
           {/* ----------------------------------------------------------------
-              Section 3: Documentation & Support
+              Section 3: Support Hours
+          ---------------------------------------------------------------- */}
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="start" gap="200">
+                  <Text as="h2" variant="headingMd">
+                    Support Hours
+                  </Text>
+                </InlineStack>
+                <Divider />
+                <BlockStack gap="200">
+                  <InlineStack align="space-between">
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">Monday - Friday</Text>
+                    <Text as="p" variant="bodyMd">9 AM - 6 PM IST</Text>
+                  </InlineStack>
+                  <InlineStack align="space-between">
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">Saturday</Text>
+                    <Text as="p" variant="bodyMd">10 AM - 4 PM IST</Text>
+                  </InlineStack>
+                  <InlineStack align="space-between">
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">Sunday</Text>
+                    <Text as="p" tone="subdued" variant="bodyMd">Closed</Text>
+                  </InlineStack>
+                </BlockStack>
+                <Banner tone="success">
+                  <Text as="p" variant="bodySm">
+                    We typically respond within 2-4 hours during business hours.
+                  </Text>
+                </Banner>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          {/* ----------------------------------------------------------------
+              Section 4: Still need help?
           ---------------------------------------------------------------- */}
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Documentation &amp; Support
+                  Still need help?
                 </Text>
                 <Divider />
                 <Text as="p" tone="subdued" variant="bodyMd">
-                  Can&rsquo;t find what you&rsquo;re looking for? Reach out &mdash; we&rsquo;re happy to
-                  help.
+                  Can&rsquo;t find what you&rsquo;re looking for? Our support team is
+                  always ready to help you succeed with Zip Code Checker.
                 </Text>
                 <InlineStack gap="300" wrap>
                   <Button
                     url="https://docs.zipcodechecker.app"
                     external
+                  >
+                    Documentation
+                  </Button>
+                  <Button
+                    url="mailto:support@boldteq.com"
+                    external
                     variant="primary"
                   >
-                    Read Documentation
-                  </Button>
-                  <Button
-                    url="mailto:support@zipcodechecker.app"
-                    external
-                  >
-                    Contact Support
-                  </Button>
-                  <Button
-                    url="https://github.com/zipcodechecker/app/issues"
-                    external
-                  >
-                    Report a Bug
+                    Email Support
                   </Button>
                   <Button
                     url="https://feedback.zipcodechecker.app"

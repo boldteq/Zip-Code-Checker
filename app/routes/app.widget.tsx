@@ -131,7 +131,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ),
       notFoundMessage: String(
         formData.get("notFoundMessage") ||
-          "This zip code was not found in our system.",
+          "We currently do not ship to this ZIP code.",
       ),
       showEta: formData.get("showEta") === "true",
       showZone: formData.get("showZone") === "true",
@@ -171,7 +171,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       buttonText: "Check",
       successMessage: "Great news! We deliver to your area.",
       errorMessage: "Sorry, we don't deliver to this area yet.",
-      notFoundMessage: "This zip code was not found in our system.",
+      notFoundMessage: "We currently do not ship to this ZIP code.",
       showEta: true,
       showZone: false,
       showWaitlistOnFailure: false,
@@ -240,7 +240,7 @@ const DEFAULTS = {
   buttonText: "Check",
   successMessage: "Great news! We deliver to your area.",
   errorMessage: "Sorry, we don't deliver to this area yet.",
-  notFoundMessage: "This zip code was not found in our system.",
+  notFoundMessage: "We currently do not ship to this ZIP code.",
   showEta: true,
   showZone: false,
   showWaitlistOnFailure: false,

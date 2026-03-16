@@ -6,51 +6,77 @@
 
 {% if request.design_mode %}
   {% comment %}
-    Theme Editor preview — render a static placeholder so no live API calls
-    are made during theme customization. The real widget loads on the storefront.
+    Theme Editor preview — shows two states:
+    1. If app embed is active → full widget preview
+    2. If app embed is NOT active → "Enable app embed" placeholder
+    We check window.__zccAppEnabled which is set by the app embed block.
   {% endcomment %}
-  <div style="
-    background:#ffffff;
-    border:1px solid #e1e3e5;
-    border-radius:8px;
-    padding:24px;
-    max-width:480px;
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    box-sizing:border-box;
-    color:#202223;
-  ">
-    <p style="font-size:16px;font-weight:600;margin:0 0 16px;">Check Delivery Availability</p>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input
-        type="text"
-        placeholder="Enter your zip code"
-        disabled
-        style="
-          flex:1;padding:10px 12px;border:1px solid #c9cccf;border-radius:8px;
-          font-size:14px;background:#fafbfb;color:#202223;min-width:0;
-        "
-      >
-      <button
-        type="button"
-        disabled
-        style="
-          background:#008060;color:#fff;border:none;border-radius:8px;
-          padding:10px 20px;font-size:14px;font-weight:600;white-space:nowrap;
-          opacity:0.7;cursor:default;
-        "
-      >Check</button>
-    </div>
-    <div style="
-      background:#00806015;border-left:3px solid #008060;border-radius:8px;
-      padding:12px;font-size:14px;color:#008060;line-height:1.4;
+  <div id="zcc-editor-{{ block.id }}">
+    <!-- Inactive state (shown by default) -->
+    <div id="zcc-inactive-{{ block.id }}" style="
+      background:#f6f6f7;border:1px dashed #c9cccf;border-radius:8px;
+      padding:20px;max-width:480px;text-align:center;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      color:#6d7175;font-size:13px;box-sizing:border-box;
     ">
-      Great news! We deliver to your area.
-      <div style="margin-top:4px;font-size:13px;opacity:0.8;">Estimated delivery: 2-3 business days</div>
+      <p style="margin:0 0 6px;font-weight:600;color:#202223;font-size:15px;">Zip Code Checker</p>
+      <p style="margin:0 0 4px;">This widget requires the app embed to be enabled.</p>
+      <p style="margin:0;font-size:12px;">Go to <strong>App Embeds</strong> and toggle on <strong>Zip Code Checker</strong> to activate.</p>
     </div>
-    <p style="margin:12px 0 0;font-size:11px;color:#8c9196;text-align:center;">
-      Zip Code Checker — live widget loads on your storefront
-    </p>
+    <!-- Active preview (hidden by default) -->
+    <div id="zcc-active-{{ block.id }}" style="display:none;">
+      <div style="
+        background:#ffffff;
+        border:1px solid #e1e3e5;
+        border-radius:8px;
+        padding:24px;
+        max-width:480px;
+        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+        box-sizing:border-box;
+        color:#202223;
+      ">
+        <p style="font-size:16px;font-weight:600;margin:0 0 16px;">Check Delivery Availability</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" placeholder="Enter your zip code" disabled style="
+            flex:1;padding:10px 12px;border:1px solid #c9cccf;border-radius:8px;
+            font-size:14px;background:#fafbfb;color:#202223;min-width:0;
+          ">
+          <button type="button" disabled style="
+            background:#008060;color:#fff;border:none;border-radius:8px;
+            padding:10px 20px;font-size:14px;font-weight:600;white-space:nowrap;
+            opacity:0.7;cursor:default;
+          ">Check</button>
+        </div>
+        <div style="
+          background:#00806015;border-left:3px solid #008060;border-radius:8px;
+          padding:12px;font-size:14px;color:#008060;line-height:1.4;
+        ">
+          Great news! We deliver to your area.
+          <div style="margin-top:4px;font-size:13px;opacity:0.8;">Estimated delivery: 2-3 business days</div>
+        </div>
+        <p style="margin:12px 0 0;font-size:11px;color:#8c9196;text-align:center;">
+          Zip Code Checker — live widget loads on your storefront
+        </p>
+      </div>
+    </div>
   </div>
+  <script>
+  (function() {
+    var bid = "{{ block.id }}";
+    function check() {
+      if (window.__zccAppEnabled) {
+        var inactive = document.getElementById('zcc-inactive-' + bid);
+        var active = document.getElementById('zcc-active-' + bid);
+        if (inactive) inactive.style.display = 'none';
+        if (active) active.style.display = 'block';
+      }
+    }
+    check();
+    setTimeout(check, 500);
+    setTimeout(check, 1500);
+    setTimeout(check, 3000);
+  })();
+  </script>
 {% else %}
 
 {% assign zcc_config = app.metafields.zip_checker.widget_config.value %}
@@ -130,7 +156,7 @@
       buttonText: "Check",
       successMessage: "Great news! We deliver to your area.",
       errorMessage: "Sorry, we don\u2019t deliver to this area yet.",
-      notFoundMessage: "This zip code was not found in our system.",
+      notFoundMessage: "We currently do not ship to this ZIP code.",
       primaryColor: "#008060",
       successColor: "#008060",
       errorColor: "#D72C0D",
@@ -161,6 +187,58 @@
       renderPopup(cfg, WID, rad);
     } else {
       renderInline(cfg, WID, rad);
+    }
+
+    // If blockCartOnInvalid is enabled, disable ATC/Buy Now buttons on page load
+    // until the customer validates their ZIP code
+    if (cfg.blockCartOnInvalid) {
+      blockCartButtonsInitial();
+    }
+  }
+
+  // ── Block ATC buttons on page load (before any ZIP check) ─────────────────
+  function blockCartButtonsInitial() {
+    var ATC_SELECTORS = [
+      'button[name="add"]',
+      '.product-form__submit',
+      '[data-product-add]',
+      '.btn--add-to-cart',
+      '.product-form button[type="submit"]',
+      'button.shopify-payment-button__button',
+      '.shopify-payment-button button',
+      'button.product-form__cart-submit'
+    ].join(',');
+
+    function doBlock() {
+      try {
+        var atcBtns = document.querySelectorAll(ATC_SELECTORS);
+        atcBtns.forEach(function(b) {
+          if (!b.closest('[data-zcc-widget]')) {
+            if (!b.getAttribute('data-zcc-blocked')) {
+              b.setAttribute('data-zcc-orig-title', b.title || '');
+            }
+            b.disabled = true;
+            b.style.opacity = '0.5';
+            b.title = 'Please check ZIP code availability first';
+            b.setAttribute('data-zcc-blocked', 'true');
+          }
+        });
+      } catch(e) {}
+    }
+
+    // Block immediately + delays for dynamic buttons (Shopify Buy Now renders late)
+    doBlock();
+    setTimeout(doBlock, 500);
+    setTimeout(doBlock, 1500);
+
+    // MutationObserver for dynamic payment buttons
+    if (typeof MutationObserver !== 'undefined') {
+      var observer = new MutationObserver(function() { doBlock(); });
+      var form = document.querySelector('.product-form, [data-product-form], form[action*="/cart/add"]');
+      if (form) {
+        observer.observe(form, { childList: true, subtree: true });
+        setTimeout(function() { observer.disconnect(); }, 10000);
+      }
     }
   }
 
@@ -314,17 +392,33 @@
             if (cfg.showWaitlistOnFailure) {
               html +=
                 '<div class="zcc-wl">' +
-                '<input class="zcc-wl-input" type="email" id="' + wid + '-wl-email" placeholder="Enter email to join waitlist" />' +
-                '<button class="zcc-wl-btn" id="' + wid + '-wl-btn" type="button">Join Waitlist</button>' +
+                '<a href="#" id="' + wid + '-wl-toggle" style="display:inline-block;margin-bottom:8px;font-size:13px;font-weight:600;color:' + cfg.primaryColor + ';text-decoration:underline;cursor:pointer">Request ZIP Code</a>' +
+                '<div id="' + wid + '-wl-form" style="display:none">' +
+                '<p style="font-size:12px;color:#6d7175;margin:0 0 8px">Request delivery to your area</p>' +
+                '<input class="zcc-wl-input" type="text" id="' + wid + '-wl-name" placeholder="Your name" style="margin-bottom:6px" />' +
+                '<input class="zcc-wl-input" type="email" id="' + wid + '-wl-email" placeholder="Your email" />' +
+                '<button class="zcc-wl-btn" id="' + wid + '-wl-btn" type="button">Submit Request</button>' +
+                '</div>' +
                 "</div>";
             }
             html += "</div>";
             res.innerHTML = html;
 
             if (cfg.showWaitlistOnFailure) {
-              // Social proof count — insert before email input
+              // Wire "Request ZIP Code" toggle link
+              var wlToggle = document.getElementById(wid + "-wl-toggle");
+              var wlForm = document.getElementById(wid + "-wl-form");
+              if (wlToggle && wlForm) {
+                wlToggle.addEventListener("click", function(e) {
+                  e.preventDefault();
+                  wlForm.style.display = wlForm.style.display === "none" ? "block" : "none";
+                  wlToggle.style.display = "none";
+                });
+              }
+
+              // Social proof count
               if (cfg.showSocialProof && data.waitlistCount && data.waitlistCount > 0) {
-                var wlSection = document.getElementById(wid + "-wl-email");
+                var wlSection = document.getElementById(wid + "-wl-name");
                 if (wlSection && wlSection.parentNode) {
                   var spEl = document.createElement('div');
                   spEl.className = 'zcc-social-proof';
@@ -337,10 +431,12 @@
               var wBtn = document.getElementById(wid + "-wl-btn");
               if (wBtn) {
                 wBtn.addEventListener("click", function () {
+                  var nameEl = document.getElementById(wid + "-wl-name");
                   var emailEl = document.getElementById(wid + "-wl-email");
+                  var name = nameEl ? nameEl.value.trim() : "";
                   var email = emailEl ? emailEl.value.trim() : "";
                   if (!email) { if (emailEl) emailEl.focus(); return; }
-                  joinWaitlist(zip, email, wBtn);
+                  joinWaitlist(zip, email, name, wBtn);
                 });
               }
             }
@@ -416,31 +512,34 @@
     });
   }
 
-  function joinWaitlist(zip, email, wBtn) {
+  function joinWaitlist(zip, email, name, wBtn) {
     wBtn.disabled = true;
-    wBtn.textContent = "Joining\u2026";
+    wBtn.textContent = "Submitting\u2026";
+
+    var payload = { shop: SHOP, zip: zip, email: email };
+    if (name) payload.name = name;
 
     fetch(API_BASE + "/api/waitlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop: SHOP, zip: zip, email: email }),
+      body: JSON.stringify(payload),
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var wlEl = wBtn.closest(".zcc-wl");
         if (data.success) {
           if (wlEl) wlEl.innerHTML =
-            '<p style="font-size:13px;margin:6px 0 0">' +
-            "\u2713 You\u2019ve been added to the waitlist!" +
+            '<p style="font-size:13px;margin:6px 0 0;color:#008060">' +
+            "\u2713 Your request has been submitted! We\u2019ll notify you when delivery is available." +
             "</p>";
         } else {
           wBtn.disabled = false;
-          wBtn.textContent = "Join Waitlist";
+          wBtn.textContent = "Submit Request";
         }
       })
       .catch(function () {
         wBtn.disabled = false;
-        wBtn.textContent = "Join Waitlist";
+        wBtn.textContent = "Submit Request";
       });
   }
 
