@@ -328,6 +328,303 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
   return base + scopeAdminCss(cfg.customCss, wid);
 }
 
+// ── Floating preview sub-component ──────────────────────────────────────────
+function FloatingPreview({
+  cfg,
+  css,
+  wid,
+  widgetHtml,
+  pinIcon,
+}: {
+  cfg: WidgetConfig;
+  css: string;
+  wid: string;
+  widgetHtml: React.ReactNode;
+  pinIcon: React.ReactNode;
+}) {
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  return (
+    <>
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      {/* Mock storefront page */}
+      <div
+        style={{
+          position: "relative",
+          minHeight: "340px",
+          background: "linear-gradient(180deg, #fafafa 0%, #f1f1f1 100%)",
+          borderRadius: "10px",
+          overflow: "hidden",
+        }}
+      >
+        {/* Fake page content lines */}
+        <div style={{ padding: "20px 16px" }}>
+          <div style={{ width: "60%", height: 10, background: "#e0e0e0", borderRadius: 4, marginBottom: 10 }} />
+          <div style={{ width: "80%", height: 8, background: "#ebebeb", borderRadius: 4, marginBottom: 8 }} />
+          <div style={{ width: "70%", height: 8, background: "#ebebeb", borderRadius: 4, marginBottom: 8 }} />
+          <div style={{ width: "45%", height: 8, background: "#ebebeb", borderRadius: 4, marginBottom: 16 }} />
+          <div style={{ width: "100%", height: 60, background: "#e8e8e8", borderRadius: 6, marginBottom: 12 }} />
+          <div style={{ width: "50%", height: 8, background: "#ebebeb", borderRadius: 4 }} />
+        </div>
+
+        {/* Floating UI anchored bottom-right */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 14,
+            right: 14,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 10,
+            zIndex: 2,
+          }}
+        >
+          {/* Panel */}
+          {panelOpen && (
+            <div
+              style={{
+                background: cfg.backgroundColor,
+                borderRadius: 14,
+                boxShadow: "0 12px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.06)",
+                width: 320,
+                maxWidth: "calc(100% - 16px)",
+                overflow: "hidden",
+                animation: "zcc-slide-in 0.25s ease",
+              }}
+            >
+              {/* Panel header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "14px 16px 0",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: cfg.textColor,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: cfg.primaryColor + "15",
+                  }}>
+                    {pinIcon}
+                  </span>
+                  {cfg.heading}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPanelOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: cfg.textColor,
+                    opacity: 0.45,
+                    padding: 4,
+                    borderRadius: 6,
+                    lineHeight: 1,
+                    display: "flex",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                    <path d="M18 6L6 18" /><path d="M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Panel body — widget with heading hidden (panel header shows it) */}
+              <div style={{ padding: "12px 16px 16px" }}>
+                <style dangerouslySetInnerHTML={{ __html: `#${wid} .zcc-heading{display:none}` }} />
+                {widgetHtml}
+              </div>
+            </div>
+          )}
+
+          {/* Trigger button */}
+          <button
+            type="button"
+            onClick={() => setPanelOpen(!panelOpen)}
+            style={{
+              background: cfg.primaryColor,
+              color: "#fff",
+              border: "none",
+              borderRadius: 50,
+              padding: "12px 20px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: `0 4px 16px ${cfg.primaryColor}40`,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              whiteSpace: "nowrap" as const,
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+            </svg>
+            Check Delivery
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Popup preview sub-component ─────────────────────────────────────────────
+function PopupPreview({
+  cfg,
+  css,
+  wid,
+  widgetHtml,
+  pinIcon,
+}: {
+  cfg: WidgetConfig;
+  css: string;
+  wid: string;
+  widgetHtml: React.ReactNode;
+  pinIcon: React.ReactNode;
+}) {
+  const [modalOpen, setModalOpen] = useState(true);
+
+  return (
+    <>
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <div style={{ position: "relative" }}>
+        {/* Trigger button (always visible) */}
+        <div style={{ marginBottom: modalOpen ? 16 : 0 }}>
+          <button
+            type="button"
+            onClick={() => setModalOpen(!modalOpen)}
+            style={{
+              background: cfg.primaryColor,
+              color: "#fff",
+              border: "none",
+              borderRadius: cfg.borderRadius + "px",
+              padding: "12px 24px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "filter 0.15s ease",
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+            </svg>
+            {cfg.heading}
+          </button>
+        </div>
+
+        {/* Simulated modal overlay */}
+        {modalOpen && (
+          <div
+            style={{
+              background: "rgba(0,0,0,.35)",
+              backdropFilter: "blur(2px)",
+              borderRadius: 10,
+              padding: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 280,
+            }}
+          >
+            {/* Modal card */}
+            <div
+              style={{
+                background: cfg.backgroundColor,
+                borderRadius: 14,
+                boxShadow: "0 24px 48px rgba(0,0,0,.15), 0 8px 16px rgba(0,0,0,.08)",
+                width: "100%",
+                maxWidth: 420,
+                overflow: "hidden",
+                animation: "zcc-slide-in 0.3s ease",
+              }}
+            >
+              {/* Modal header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "18px 20px 0",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: cfg.textColor,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: cfg.primaryColor + "15",
+                  }}>
+                    {pinIcon}
+                  </span>
+                  {cfg.heading}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: cfg.textColor,
+                    opacity: 0.45,
+                    padding: 4,
+                    borderRadius: 6,
+                    lineHeight: 1,
+                    display: "flex",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+                    <path d="M18 6L6 18" /><path d="M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Modal body — widget with heading hidden (modal header shows it) */}
+              <div style={{ padding: "12px 20px 20px" }}>
+                <style dangerouslySetInnerHTML={{ __html: `#${wid} .zcc-heading{display:none}` }} />
+                {widgetHtml}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ── Live Preview component (defined outside WidgetPage to avoid remounting) ─
 const WidgetPreview = memo(function WidgetPreview({
   cfg,
@@ -454,129 +751,17 @@ const WidgetPreview = memo(function WidgetPreview({
     </div>
   );
 
-  // Floating position: show mock fixed button + collapsible panel concept
+  // Floating position: realistic storefront simulation with toggle
   if (cfg.position === "floating") {
     return (
-      <>
-        {/* eslint-disable-next-line react/no-danger */}
-        <style dangerouslySetInnerHTML={{ __html: css }} />
-        <div
-          style={{
-            position: "relative",
-            minHeight: "120px",
-            background: "#f6f6f7",
-            borderRadius: "8px",
-            padding: "12px",
-          }}
-        >
-          <Text as="p" variant="bodySm" tone="subdued">
-            The widget will appear as a fixed button in the bottom-right corner of your storefront.
-          </Text>
-          <div
-            style={{
-              position: "absolute",
-              bottom: "12px",
-              right: "12px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: "8px",
-            }}
-          >
-            <div id={wid} style={{ maxWidth: "300px", border: "none", boxShadow: "none" }}>
-              <div className="zcc-heading" style={{ marginBottom: "12px" }}>
-                <span className="zcc-heading-icon">{pinIcon}</span>
-                <span>{cfg.heading}</span>
-              </div>
-              <div className="zcc-search-bar">
-                <input
-                  className="zcc-input"
-                  type="text"
-                  placeholder={cfg.placeholder}
-                  readOnly
-                />
-                <button className="zcc-btn" type="button">
-                  {searchIcon}
-                  {cfg.buttonText}
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              style={{
-                background: cfg.primaryColor,
-                color: "#fff",
-                border: "none",
-                borderRadius: "50px",
-                padding: "12px 20px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: `0 4px 16px ${cfg.primaryColor}40`,
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-              Check Delivery
-            </button>
-          </div>
-        </div>
-      </>
+      <FloatingPreview cfg={cfg} css={css} wid={wid} widgetHtml={widgetHtml} pinIcon={pinIcon} />
     );
   }
 
-  // Popup position: show trigger button + hint of overlay
+  // Popup position: realistic modal overlay simulation
   if (cfg.position === "popup") {
     return (
-      <>
-        {/* eslint-disable-next-line react/no-danger */}
-        <style dangerouslySetInnerHTML={{ __html: css }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Text as="p" variant="bodySm" tone="subdued">
-            A trigger button will appear in the section. Clicking it opens a centered popup.
-          </Text>
-          <div>
-            <button
-              type="button"
-              style={{
-                background: cfg.primaryColor,
-                color: "#fff",
-                border: "none",
-                borderRadius: cfg.borderRadius + "px",
-                padding: "12px 28px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:16,height:16}}>
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-              {cfg.heading}
-            </button>
-          </div>
-          <div
-            style={{
-              background: "rgba(0,0,0,.06)",
-              borderRadius: "8px",
-              padding: "12px",
-              border: "2px dashed #c9cccf",
-            }}
-          >
-            <Text as="p" variant="bodySm" tone="subdued">
-              Popup content preview:
-            </Text>
-            <div style={{ marginTop: "8px" }}>{widgetHtml}</div>
-          </div>
-        </div>
-      </>
+      <PopupPreview cfg={cfg} css={css} wid={wid} widgetHtml={widgetHtml} pinIcon={pinIcon} />
     );
   }
 
