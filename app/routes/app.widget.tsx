@@ -29,6 +29,7 @@ import {
   Banner,
   Badge,
   Modal,
+  Tabs,
 } from "@shopify/polaris";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -903,44 +904,139 @@ export default function WidgetPage() {
               {/* ── Settings Column ── */}
               <BlockStack gap="400">
 
-                {/* Style Preset */}
+                {/* Layout — Position Only */}
                 <Card>
-                  <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">
-                      Widget Style
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Choose a visual style for your widget. All styles respect your color settings.
-                    </Text>
-                    <BlockStack gap="300">
-                      {/* Clean */}
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="h2" variant="headingMd">Layout</Text>
+                      {!limits.widgetFullCustom && (
+                        <Badge tone="info">Starter+</Badge>
+                      )}
+                    </InlineStack>
+                    <InlineStack gap="200" wrap>
+                      {/* Inline */}
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => handleWidgetStyleChange("minimal")}
-                        onKeyDown={(e) => e.key === "Enter" && handleWidgetStyleChange("minimal")}
+                        onClick={() => limits.widgetFullCustom && handlePositionChange("inline")}
+                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("inline")}
                         style={{
-                          border: widgetStyle === "minimal" ? "2px solid " + primaryColor : "2px solid #e5e7eb",
-                          borderRadius: "10px",
-                          padding: "16px",
-                          cursor: "pointer",
-                          background: widgetStyle === "minimal" ? primaryColor + "06" : "#fff",
+                          flex: 1,
+                          minWidth: 100,
+                          border: position === "inline" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
+                          borderRadius: 10,
+                          padding: "12px 10px",
+                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
+                          background: position === "inline" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
+                          textAlign: "center" as const,
+                          opacity: limits.widgetFullCustom ? 1 : 0.5,
                           transition: "all 0.15s ease",
                           outline: "none",
                         }}
                       >
+                        <BlockStack gap="100" inlineAlign="center">
+                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                            <rect x="8" y="12" width="16" height="8" rx="2" fill={position === "inline" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.6"/>
+                          </svg>
+                          <Text as="p" variant="bodySm" fontWeight={position === "inline" ? "semibold" : "regular"}>Inline</Text>
+                        </BlockStack>
+                      </div>
+                      {/* Floating */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => limits.widgetFullCustom && handlePositionChange("floating")}
+                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("floating")}
+                        style={{
+                          flex: 1,
+                          minWidth: 100,
+                          border: position === "floating" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
+                          borderRadius: 10,
+                          padding: "12px 10px",
+                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
+                          background: position === "floating" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
+                          textAlign: "center" as const,
+                          opacity: limits.widgetFullCustom ? 1 : 0.5,
+                          transition: "all 0.15s ease",
+                          outline: "none",
+                        }}
+                      >
+                        <BlockStack gap="100" inlineAlign="center">
+                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                            <circle cx="24" cy="24" r="5" fill={position === "floating" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.7"/>
+                          </svg>
+                          <Text as="p" variant="bodySm" fontWeight={position === "floating" ? "semibold" : "regular"}>Floating</Text>
+                        </BlockStack>
+                      </div>
+                      {/* Popup */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => limits.widgetFullCustom && handlePositionChange("popup")}
+                        onKeyDown={(e) => e.key === "Enter" && limits.widgetFullCustom && handlePositionChange("popup")}
+                        style={{
+                          flex: 1,
+                          minWidth: 100,
+                          border: position === "popup" ? "2px solid var(--p-color-border-emphasis)" : "1px solid var(--p-color-border-secondary)",
+                          borderRadius: 10,
+                          padding: "12px 10px",
+                          cursor: limits.widgetFullCustom ? "pointer" : "not-allowed",
+                          background: position === "popup" ? "var(--p-color-bg-surface-selected)" : "var(--p-color-bg-surface)",
+                          textAlign: "center" as const,
+                          opacity: limits.widgetFullCustom ? 1 : 0.5,
+                          transition: "all 0.15s ease",
+                          outline: "none",
+                        }}
+                      >
+                        <BlockStack gap="100" inlineAlign="center">
+                          <svg viewBox="0 0 32 32" fill="none" style={{ width: 28, height: 28, margin: "0 auto" }}>
+                            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                            <rect x="9" y="9" width="14" height="14" rx="3" stroke={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} strokeWidth="1.5" fill={position === "popup" ? "var(--p-color-icon-emphasis)" : "var(--p-color-icon-secondary)"} opacity="0.5"/>
+                          </svg>
+                          <Text as="p" variant="bodySm" fontWeight={position === "popup" ? "semibold" : "regular"}>Popup</Text>
+                        </BlockStack>
+                      </div>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {position === "floating"
+                        ? "Fixed button in the bottom-right corner of every page."
+                        : position === "popup"
+                        ? "A trigger button that opens a centered popup overlay."
+                        : "Renders directly where you place the block in the Theme Editor."}
+                    </Text>
+                    {!limits.widgetFullCustom && (
+                      <Banner tone="info">
+                        <Text as="p" variant="bodySm">
+                          Upgrade to Starter to customize widget position.{" "}
+                          <Button variant="plain" onClick={() => navigate("/app/pricing")}>View plans</Button>
+                        </Text>
+                      </Banner>
+                    )}
+                  </BlockStack>
+                </Card>
+
+                {/* Widget Style — Horizontal Tabs */}
+                <Card>
+                  <BlockStack gap="300">
+                    <Text as="h2" variant="headingMd">Widget Style</Text>
+                    <Tabs
+                      tabs={[
+                        { id: "clean", content: "Clean" },
+                        { id: "branded", content: "Branded" },
+                        { id: "premium", content: "Premium" },
+                      ]}
+                      selected={widgetStyle === "bold" ? 1 : widgetStyle === "card" ? 2 : 0}
+                      onSelect={(i) => handleWidgetStyleChange(["minimal", "bold", "card"][i])}
+                      fitted
+                    />
+                    {/* Mini preview + description for selected style */}
+                    <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                      {widgetStyle === "minimal" && (
                         <BlockStack gap="200">
-                          <InlineStack align="space-between" blockAlign="center">
-                            <Text as="p" variant="bodyMd" fontWeight="semibold">Clean</Text>
-                            {widgetStyle === "minimal" && (
-                              <div style={{ width: 18, height: 18, borderRadius: "50%", background: primaryColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                              </div>
-                            )}
-                          </InlineStack>
-                          <Text as="p" variant="bodySm" tone="subdued">Frameless Apple-style layout. Oversized bold heading with square icon, inset button inside a floating search bar.</Text>
-                          {/* Mini visual preview — transparent bg, bold text, inset button */}
-                          <div style={{ marginTop: 8, pointerEvents: "none", userSelect: "none", background: "transparent", padding: "4px 0" }}>
+                          {/* Clean mini preview */}
+                          <div style={{ pointerEvents: "none", userSelect: "none", padding: "4px 0" }}>
                             <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.03em", color: "#111", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                               <div style={{ width: 20, height: 20, borderRadius: 5, background: primaryColor, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                 <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -952,37 +1048,13 @@ export default function WidgetPage() {
                               <div style={{ background: primaryColor, margin: 4, borderRadius: 7, padding: "0 12px", height: 26, display: "flex", alignItems: "center", fontSize: 10, color: "#fff", fontWeight: 700 }}>Check</div>
                             </div>
                           </div>
+                          <Text as="p" variant="bodySm" tone="subdued">Frameless, oversized heading, inset button inside a floating search bar.</Text>
                         </BlockStack>
-                      </div>
-
-                      {/* Branded */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleWidgetStyleChange("bold")}
-                        onKeyDown={(e) => e.key === "Enter" && handleWidgetStyleChange("bold")}
-                        style={{
-                          border: widgetStyle === "bold" ? "2px solid " + primaryColor : "2px solid #e5e7eb",
-                          borderRadius: "10px",
-                          padding: "16px",
-                          cursor: "pointer",
-                          background: widgetStyle === "bold" ? primaryColor + "06" : "#fff",
-                          transition: "all 0.15s ease",
-                          outline: "none",
-                        }}
-                      >
+                      )}
+                      {widgetStyle === "bold" && (
                         <BlockStack gap="200">
-                          <InlineStack align="space-between" blockAlign="center">
-                            <Text as="p" variant="bodyMd" fontWeight="semibold">Branded</Text>
-                            {widgetStyle === "bold" && (
-                              <div style={{ width: 18, height: 18, borderRadius: "50%", background: primaryColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                              </div>
-                            )}
-                          </InlineStack>
-                          <Text as="p" variant="bodySm" tone="subdued">Two-tone design with a full-bleed colored header band. White card body with floating search bar below.</Text>
-                          {/* Mini visual preview — colored top band + white bottom */}
-                          <div style={{ marginTop: 8, pointerEvents: "none", userSelect: "none", borderRadius: 10, overflow: "hidden", boxShadow: "0 4px 14px rgba(0,0,0,0.1)" }}>
+                          {/* Branded mini preview */}
+                          <div style={{ pointerEvents: "none", userSelect: "none", borderRadius: 10, overflow: "hidden", boxShadow: "0 4px 14px rgba(0,0,0,0.1)" }}>
                             <div style={{ background: primaryColor, padding: "8px 12px", display: "flex", alignItems: "center", gap: 6 }}>
                               <div style={{ width: 16, height: 16, borderRadius: 4, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <svg viewBox="0 0 24 24" fill="none" width="9" height="9"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -996,37 +1068,13 @@ export default function WidgetPage() {
                               </div>
                             </div>
                           </div>
+                          <Text as="p" variant="bodySm" tone="subdued">Two-tone header band with white card body. Bold, branded feel.</Text>
                         </BlockStack>
-                      </div>
-
-                      {/* Premium */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleWidgetStyleChange("card")}
-                        onKeyDown={(e) => e.key === "Enter" && handleWidgetStyleChange("card")}
-                        style={{
-                          border: widgetStyle === "card" ? "2px solid " + primaryColor : "2px solid #e5e7eb",
-                          borderRadius: "10px",
-                          padding: "16px",
-                          cursor: "pointer",
-                          background: widgetStyle === "card" ? primaryColor + "06" : "#fff",
-                          transition: "all 0.15s ease",
-                          outline: "none",
-                        }}
-                      >
+                      )}
+                      {widgetStyle === "card" && (
                         <BlockStack gap="200">
-                          <InlineStack align="space-between" blockAlign="center">
-                            <Text as="p" variant="bodyMd" fontWeight="semibold">Premium</Text>
-                            {widgetStyle === "card" && (
-                              <div style={{ width: 18, height: 18, borderRadius: "50%", background: primaryColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                              </div>
-                            )}
-                          </InlineStack>
-                          <Text as="p" variant="bodySm" tone="subdued">Gradient card with colored top border and deep shadow. Spring-bounce animation on results for a premium feel.</Text>
-                          {/* Mini visual preview — gradient card with top border + shadow */}
-                          <div style={{ marginTop: 8, pointerEvents: "none", userSelect: "none" }}>
+                          {/* Premium mini preview */}
+                          <div style={{ pointerEvents: "none", userSelect: "none" }}>
                             <div style={{ background: "linear-gradient(150deg,#fff 0%," + primaryColor + "08 100%)", borderRadius: 12, padding: "10px 12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", borderTop: "3px solid " + primaryColor }}>
                               <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: "-0.03em", color: "#111", marginBottom: 7, display: "flex", alignItems: "center", gap: 5 }}>
                                 <div style={{ width: 18, height: 18, borderRadius: 5, background: primaryColor, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px " + primaryColor + "55" }}>
@@ -1040,59 +1088,10 @@ export default function WidgetPage() {
                               </div>
                             </div>
                           </div>
+                          <Text as="p" variant="bodySm" tone="subdued">Gradient card with colored top border, deep shadow, spring-bounce animations.</Text>
                         </BlockStack>
-                      </div>
-                    </BlockStack>
-                  </BlockStack>
-                </Card>
-
-                {/* Layout */}
-                <Card>
-                  <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h2" variant="headingMd">
-                        Layout
-                      </Text>
-                      {!limits.widgetFullCustom && (
-                        <Badge tone="info">Starter+</Badge>
                       )}
-                    </InlineStack>
-                    <Select
-                      label="Widget Position"
-                      options={positionOptions}
-                      value={position}
-                      onChange={handlePositionChange}
-                      disabled={!limits.widgetFullCustom}
-                      helpText={
-                        position === "floating"
-                          ? "Widget appears as a fixed button in the bottom-right corner of every page."
-                          : position === "popup"
-                          ? "A trigger button shows in the block. Clicking it opens a centered popup overlay."
-                          : "Widget renders directly where you place the block in the Theme Editor."
-                      }
-                    />
-                    <TextField
-                      label="Border Radius (px)"
-                      type="number"
-                      value={borderRadius}
-                      onChange={handleBorderRadiusChange}
-                      autoComplete="off"
-                      disabled={!limits.widgetFullCustom}
-                      helpText="Roundness of corners. 0 = square, 16 = very rounded."
-                    />
-                    {!limits.widgetFullCustom && (
-                      <Banner tone="info">
-                        <Text as="p" variant="bodySm">
-                          Upgrade to Starter to customize widget position and layout.{" "}
-                          <Button
-                            variant="plain"
-                            onClick={() => navigate("/app/pricing")}
-                          >
-                            View plans
-                          </Button>
-                        </Text>
-                      </Banner>
-                    )}
+                    </Box>
                   </BlockStack>
                 </Card>
 
@@ -1269,6 +1268,16 @@ export default function WidgetPage() {
                         />
                       </InlineStack>
                     </BlockStack>
+                    <Divider />
+                    <TextField
+                      label="Border Radius (px)"
+                      type="number"
+                      value={borderRadius}
+                      onChange={handleBorderRadiusChange}
+                      autoComplete="off"
+                      disabled={!limits.widgetFullCustom}
+                      helpText="Roundness of corners. 0 = square, 16 = very rounded."
+                    />
                     {!limits.widgetFullCustom && (
                       <Banner tone="info">
                         <Text as="p" variant="bodySm">
