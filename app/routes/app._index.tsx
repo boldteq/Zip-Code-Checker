@@ -92,39 +92,79 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
       const content = mainTheme.files?.nodes?.[0]?.body?.content;
       if (content) {
-        const settingsData = JSON.parse(content) as {
-          current?: { blocks?: Record<string, unknown> };
-        };
-        const blocks = settingsData?.current?.blocks ?? {};
-        // Block keys/types in settings_data.json look like:
-        // shopify://apps/<handle>/blocks/app_embed/<uuid>
-        // Only match our app using the SHOPIFY_API_KEY (client_id)
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const settingsData = JSON.parse(content) as any;
+
+        // Collect all blocks from every possible location in settings_data.json
+        // Themes can structure this as:
+        //   - current.blocks (older themes)
+        //   - current.presets.*.blocks (preset-based themes)
+        //   - Or nested within sections
+        const allBlocks: Record<string, any> = {};
+
+        // Direct blocks at current level
+        if (settingsData?.current?.blocks) {
+          Object.assign(allBlocks, settingsData.current.blocks);
+        }
+
+        // Also scan the entire JSON string for app_embed references
+        // This is the most reliable check — if the content contains our
+        // app embed reference and it's not disabled, it's enabled
+        const contentLower = content.toLowerCase();
         const apiKey = process.env.SHOPIFY_API_KEY ?? "";
-        appEmbedEnabled = Object.entries(blocks).some(
-          ([key, block]) => {
-            const b = block as { type?: string; disabled?: boolean };
-            const typeStr = b.type ?? "";
-            const keyStr = key ?? "";
-            const isAppEmbed =
-              typeStr.includes("app-embed") ||
-              typeStr.includes("app_embed");
-            if (!isAppEmbed || b.disabled === true) return false;
-            // Match by API key (client_id) or app handle in key/type
-            if (apiKey && (keyStr.includes(apiKey) || typeStr.includes(apiKey))) {
-              return true;
-            }
-            // Also match by app handle patterns (e.g. "zip-code-checker", "zip-code-widget")
-            if (
-              keyStr.includes("zip-code") ||
-              typeStr.includes("zip-code") ||
-              keyStr.includes("zip_code") ||
-              typeStr.includes("zip_code")
-            ) {
-              return true;
-            }
-            return false;
-          },
-        );
+
+        // Method 1: Check parsed blocks
+        if (Object.keys(allBlocks).length > 0) {
+          appEmbedEnabled = Object.entries(allBlocks).some(
+            ([key, block]) => {
+              const b = block as { type?: string; disabled?: boolean };
+              const typeStr = b.type ?? "";
+              const keyStr = key ?? "";
+              const isAppEmbed =
+                typeStr.includes("app-embed") ||
+                typeStr.includes("app_embed");
+              if (!isAppEmbed || b.disabled === true) return false;
+              if (apiKey && (keyStr.includes(apiKey) || typeStr.includes(apiKey))) {
+                return true;
+              }
+              if (
+                keyStr.includes("zip-code") ||
+                typeStr.includes("zip-code") ||
+                keyStr.includes("zip_code") ||
+                typeStr.includes("zip_code")
+              ) {
+                return true;
+              }
+              return false;
+            },
+          );
+        }
+
+        // Method 2: Fallback — scan the raw JSON for app_embed with our identifiers
+        if (!appEmbedEnabled) {
+          const hasAppEmbed = contentLower.includes("app_embed") || contentLower.includes("app-embed");
+          const hasOurApp =
+            (apiKey && contentLower.includes(apiKey.toLowerCase())) ||
+            contentLower.includes("zip-code-checker") ||
+            contentLower.includes("zip_code_checker") ||
+            contentLower.includes("zip-code-widget");
+          // Check it's not disabled — look for our embed block not having "disabled":true
+          if (hasAppEmbed && hasOurApp) {
+            // If we find our app embed reference, check it's not explicitly disabled
+            const disabledPattern = /"disabled"\s*:\s*true/;
+            // Find all app_embed blocks related to our app
+            const embedRegex = /("type"\s*:\s*"[^"]*app[_-]embed[^"]*"[^}]*"disabled"\s*:\s*true)/gi;
+            const disabledEmbeds = content.match(embedRegex) ?? [];
+            const ourDisabled = disabledEmbeds.some(
+              (match) =>
+                match.includes("zip-code") ||
+                match.includes("zip_code") ||
+                (apiKey && match.includes(apiKey)),
+            );
+            appEmbedEnabled = !ourDisabled;
+          }
+        }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
       }
     }
   } catch {
