@@ -9,7 +9,6 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import {
-  ALL_PAID_PLANS,
   PLAN_STARTER_MONTHLY,
   PLAN_STARTER_ANNUAL,
   PLAN_PRO_MONTHLY,

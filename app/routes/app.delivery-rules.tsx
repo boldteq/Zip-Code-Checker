@@ -17,6 +17,7 @@ import {
   Card,
   BlockStack,
   InlineStack,
+  InlineGrid,
   Text,
   Badge,
   Button,
@@ -490,27 +491,23 @@ export default function DeliveryRulesPage() {
               helpText="A descriptive name for this delivery rule."
             />
 
-            <InlineStack gap="300">
-              <div style={{ flex: 1 }}>
-                <Select
-                  label="Zone"
-                  options={zoneOptions}
-                  value={zone}
-                  onChange={setZone}
-                  helpText="Apply this rule to a specific zone, or all zones."
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Priority"
-                  type="number"
-                  value={priority}
-                  onChange={setPriority}
-                  autoComplete="off"
-                  helpText="Lower number = higher priority."
-                />
-              </div>
-            </InlineStack>
+            <InlineGrid columns={2} gap="300">
+              <Select
+                label="Zone"
+                options={zoneOptions}
+                value={zone}
+                onChange={setZone}
+                helpText="Apply this rule to a specific zone, or all zones."
+              />
+              <TextField
+                label="Priority"
+                type="number"
+                value={priority}
+                onChange={setPriority}
+                autoComplete="off"
+                helpText="Lower number = higher priority."
+              />
+            </InlineGrid>
 
             <TextField
               label="Specific Zip Codes (optional)"
@@ -526,30 +523,26 @@ export default function DeliveryRulesPage() {
               Pricing
             </Text>
 
-            <InlineStack gap="300">
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Delivery Fee ($)"
-                  type="number"
-                  value={deliveryFee}
-                  onChange={setDeliveryFee}
-                  placeholder="0.00"
-                  autoComplete="off"
-                  helpText="Leave empty for free delivery."
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Min. Order Amount ($)"
-                  type="number"
-                  value={minOrderAmount}
-                  onChange={setMinOrderAmount}
-                  placeholder="0.00"
-                  autoComplete="off"
-                  helpText="Minimum order to qualify for delivery."
-                />
-              </div>
-            </InlineStack>
+            <InlineGrid columns={2} gap="300">
+              <TextField
+                label="Delivery Fee ($)"
+                type="number"
+                value={deliveryFee}
+                onChange={setDeliveryFee}
+                placeholder="0.00"
+                autoComplete="off"
+                helpText="Leave empty for free delivery."
+              />
+              <TextField
+                label="Min. Order Amount ($)"
+                type="number"
+                value={minOrderAmount}
+                onChange={setMinOrderAmount}
+                placeholder="0.00"
+                autoComplete="off"
+                helpText="Minimum order to qualify for delivery."
+              />
+            </InlineGrid>
 
             <TextField
               label="Free Shipping Above ($)"
@@ -566,27 +559,23 @@ export default function DeliveryRulesPage() {
               Schedule
             </Text>
 
-            <InlineStack gap="300">
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Estimated Delivery"
-                  value={estimatedDays}
-                  onChange={setEstimatedDays}
-                  placeholder="e.g. 2-3 days"
-                  autoComplete="off"
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Order Cutoff Time"
-                  value={cutoffTime}
-                  onChange={setCutoffTime}
-                  placeholder="e.g. 14:00"
-                  autoComplete="off"
-                  helpText="Orders after this time ship next delivery day."
-                />
-              </div>
-            </InlineStack>
+            <InlineGrid columns={2} gap="300">
+              <TextField
+                label="Estimated Delivery"
+                value={estimatedDays}
+                onChange={setEstimatedDays}
+                placeholder="e.g. 2-3 days"
+                autoComplete="off"
+              />
+              <TextField
+                label="Order Cutoff Time"
+                value={cutoffTime}
+                onChange={setCutoffTime}
+                placeholder="e.g. 14:00"
+                autoComplete="off"
+                helpText="Orders after this time ship next delivery day."
+              />
+            </InlineGrid>
 
             <BlockStack gap="200">
               <Text as="p" variant="bodyMd">

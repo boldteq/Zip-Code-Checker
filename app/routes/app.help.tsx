@@ -13,7 +13,6 @@ import {
   List,
   Divider,
   Box,
-  Badge,
   Banner,
 } from "@shopify/polaris";
 

@@ -3,7 +3,7 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-    const { payload, session, shop } = await authenticate.webhook(request);
+    const { payload, session } = await authenticate.webhook(request);
 
     const current = payload.current as string[];
     if (session) {

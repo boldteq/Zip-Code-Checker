@@ -32,7 +32,7 @@ import {
 } from "@shopify/polaris";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
   let config = await db.widgetConfig.findUnique({ where: { shop } });
@@ -90,14 +90,7 @@ async function syncConfigMetafield(
         },
       },
     );
-    const metaJson = (await metaResponse.json()) as {
-      data: {
-        metafieldsSet: {
-          metafields: { id: string; namespace: string; key: string }[];
-          userErrors: { field: string; message: string }[];
-        };
-      };
-    };
+    await metaResponse.json();
 
     // userErrors are non-fatal — the API fallback still works
   } catch {
@@ -285,7 +278,7 @@ function scopeAdminCss(rawCss: string | null | undefined, wid: string): string {
 
 // ── CSS generators — one per style preset, mirrors the Liquid block CSS ─────
 
-function buildSharedMetaCss(W: string, cfg: WidgetConfig): string {
+function buildSharedMetaCss(W: string): string {
   return (
     W + " .zcc-result-icon{flex-shrink:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}" +
     W + " .zcc-result-icon svg{width:22px;height:22px}" +
@@ -324,7 +317,7 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
     W + " .zcc-wl{margin-top:12px;padding:14px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef}" +
     W + " .zcc-wl-input{border-radius:8px;border:1.5px solid #dee2e6;padding:10px 14px;width:100%;display:block;margin-bottom:8px;outline:none;font-size:13px;transition:border-color 0.2s}" +
     W + " .zcc-wl-btn{border-radius:8px;background:" + cfg.primaryColor + ";color:#fff;padding:11px;width:100%;font-weight:600;border:none;cursor:pointer;font-size:13px;transition:filter 0.2s}" +
-    buildSharedMetaCss(W, cfg);
+    buildSharedMetaCss(W);
   return base + scopeAdminCss(cfg.customCss, wid);
 }
 
@@ -993,12 +986,6 @@ export default function WidgetPage() {
     setResetModalOpen(false);
     shopify.toast.show("Widget settings reset to defaults");
   }, [fetcher, shopify]);
-
-  const positionOptions = [
-    { label: "Inline — embedded directly in the section", value: "inline" },
-    { label: "Floating — fixed button in the corner", value: "floating" },
-    { label: "Popup — trigger button opens a modal", value: "popup" },
-  ];
 
   // Current config snapshot for the preview (memoized to avoid re-renders)
   const previewCfg: WidgetConfig = useMemo(() => ({

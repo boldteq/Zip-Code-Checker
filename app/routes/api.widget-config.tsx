@@ -89,10 +89,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
   }
 
-  const [config, subscription] = await Promise.all([
-    db.widgetConfig.findUnique({ where: { shop } }),
-    getShopSubscription(shop),
-  ]);
+  let config, subscription;
+  try {
+    [config, subscription] = await Promise.all([
+      db.widgetConfig.findUnique({ where: { shop } }),
+      getShopSubscription(shop),
+    ]);
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
 
   const limits = subscription.limits;
 
