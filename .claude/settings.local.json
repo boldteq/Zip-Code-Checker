@@ -1,13 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)",
-      "Bash(npx eslint:*)",
-      "Bash(npx prisma:*)",
-      "Bash(npx shopify:*)",
-      "Bash(git status)",
-      "Bash(git diff*)",
-      "Bash(git log*)"
-    ]
+      "Bash(*)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "TodoWrite",
+      "NotebookEdit"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }
