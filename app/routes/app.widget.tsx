@@ -296,31 +296,32 @@ function scopeAdminCss(rawCss: string | null | undefined, wid: string): string {
 // ── CSS generators — one per style preset, mirrors the Liquid block CSS ─────
 
 function buildSharedMetaCss(W: string, cfg: WidgetConfig): string {
-  const primaryColor = cfg.primaryColor;
-  const successColor = cfg.successColor;
+  const p = cfg.primaryColor;
+  const s = cfg.successColor;
   return (
     W + " .zcc-result-icon{flex-shrink:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}" +
     W + " .zcc-result-icon svg{width:22px;height:22px}" +
     W + " .zcc-result-content{flex:1;min-width:0}" +
-    W + " .zcc-meta{padding:8px 0;font-size:13.5px;display:flex;align-items:center;gap:8px;color:" + cfg.textColor + "}" +
-    W + " .zcc-meta+.zcc-meta{border-top:1px solid rgba(0,0,0,0.05);padding-top:10px;margin-top:2px}" +
-    W + " .zcc-meta>span:first-child{color:" + primaryColor + ";opacity:0.8}" +
-    W + " .zcc-cutoff{padding:8px 0;font-size:13.5px;display:flex;align-items:center;gap:8px}" +
-    W + " .zcc-days{padding:8px 0;font-size:13.5px;display:flex;align-items:center;gap:8px}" +
-    W + " .zcc-cod{margin-top:8px;display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:600}" +
-    W + " .zcc-cod--available{background:" + successColor + "10;border:1px solid " + successColor + "20;color:" + successColor + "}" +
+    // Compact single-line meta rows — tight spacing
+    W + " .zcc-meta{margin-top:4px;font-size:13px;display:flex;align-items:center;gap:6px;color:" + cfg.textColor + ";line-height:1.3}" +
+    W + " .zcc-meta .zcc-emoji{font-size:14px;flex-shrink:0;width:18px;text-align:center}" +
+    W + " .zcc-meta strong{font-weight:700}" +
+    // COD as compact inline pill
+    W + " .zcc-cod{margin-top:6px;display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600}" +
+    W + " .zcc-cod--available{background:" + s + "10;border:1px solid " + s + "20;color:" + s + "}" +
     W + " .zcc-cod--unavailable{background:#d72c0d10;border:1px solid #d72c0d20;color:#d72c0d}" +
-    W + " .zcc-return-policy{padding:8px 0;font-size:13.5px;display:flex;align-items:center;gap:8px;color:" + cfg.textColor + "}" +
     W + " .zcc-wl-title{font-size:13px;font-weight:700;color:" + cfg.textColor + ";margin-bottom:10px}" +
-    W + " .zcc-confirmed-header{display:flex;align-items:center;gap:8px;padding:12px 16px;background:" + successColor + "06;border:1px solid " + successColor + "15;border-radius:12px;font-size:14px;font-weight:500;color:" + cfg.textColor + "}" +
-    W + " .zcc-change-link{margin-left:auto;color:" + primaryColor + ";font-size:13px;cursor:pointer;font-weight:600}" +
-    W + " .zcc-timeline{display:flex;align-items:center;margin-top:16px;padding:16px;background:" + primaryColor + "06;border-radius:14px;gap:0}" +
-    W + " .zcc-timeline-step{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px}" +
-    W + " .zcc-timeline-icon{font-size:20px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.06)}" +
-    W + " .zcc-timeline-step--active .zcc-timeline-icon{box-shadow:0 2px 8px " + primaryColor + "20}" +
-    W + " .zcc-timeline-label{font-size:11px;font-weight:700;color:" + cfg.textColor + ";text-transform:uppercase;letter-spacing:0.5px}" +
-    W + " .zcc-timeline-date{font-size:12px;color:#6b7280}" +
-    W + " .zcc-timeline-line{height:2px;width:20px;background:" + primaryColor + "30;flex-shrink:0}"
+    // Confirmed header — compact
+    W + " .zcc-confirmed-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:" + s + "06;border:1px solid " + s + "15;border-radius:10px;font-size:13.5px;font-weight:500;color:" + cfg.textColor + "}" +
+    W + " .zcc-change-link{margin-left:auto;color:" + p + ";font-size:12px;cursor:pointer;font-weight:600}" +
+    // Compact inline timeline — single row
+    W + " .zcc-timeline{display:flex;align-items:center;margin-top:10px;padding:10px 12px;background:" + p + "05;border-radius:10px;gap:0;justify-content:center}" +
+    W + " .zcc-timeline-step{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}" +
+    W + " .zcc-timeline-icon{font-size:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.06)}" +
+    W + " .zcc-timeline-step--active .zcc-timeline-icon{box-shadow:0 1px 6px " + p + "18}" +
+    W + " .zcc-timeline-label{font-size:10px;font-weight:700;color:" + cfg.textColor + ";text-transform:uppercase;letter-spacing:0.3px}" +
+    W + " .zcc-timeline-date{font-size:10px;color:#6b7280}" +
+    W + " .zcc-timeline-line{height:2px;width:16px;background:" + p + "25;flex-shrink:0}"
   );
 }
 
@@ -335,24 +336,24 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
     "@keyframes zcc-pulse-ring{0%{transform:scale(1);opacity:.5}50%{transform:scale(1.2);opacity:0}100%{transform:scale(1.2);opacity:0}}" +
     W + "{background:transparent;color:" + cfg.textColor + ";padding:0;border:none;box-shadow:none;max-width:480px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;box-sizing:border-box}" +
     W + " *{box-sizing:border-box}" +
-    W + " .zcc-heading{font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 0;color:" + cfg.textColor + ";display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,0.06);margin-bottom:16px}" +
-    W + " .zcc-heading-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg," + p + "18," + p + "08);flex-shrink:0}" +
-    W + " .zcc-heading-icon svg{width:16px;height:16px}" +
+    W + " .zcc-heading{font-size:15px;font-weight:700;letter-spacing:-0.01em;margin:0;color:" + cfg.textColor + ";display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,0.06);margin-bottom:12px}" +
+    W + " .zcc-heading-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg," + p + "18," + p + "08);flex-shrink:0}" +
+    W + " .zcc-heading-icon svg{width:14px;height:14px}" +
     W + " .zcc-search-bar{display:flex;background:#f8f9fa;border:1px solid #e8e8e8;border-radius:50px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s}" +
     W + " .zcc-search-bar:focus-within{border-color:" + p + ";box-shadow:0 0 0 3px " + p + "15}" +
-    W + " .zcc-input{padding:14px 20px;font-size:14px;border:none;outline:none;flex:1;background:transparent;color:" + cfg.textColor + ";min-width:0}" +
+    W + " .zcc-input{padding:12px 16px;font-size:14px;border:none;outline:none;flex:1;background:transparent;color:" + cfg.textColor + ";min-width:0}" +
     W + " .zcc-input::placeholder{color:#9ca3af}" +
-    W + " .zcc-btn{background:" + p + ";color:#fff;border:none;padding:14px 28px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-radius:0 50px 50px 0;box-shadow:0 2px 8px " + p + "25;transition:transform 0.2s ease,box-shadow 0.2s ease,filter 0.2s}" +
+    W + " .zcc-btn{background:" + p + ";color:#fff;border:none;padding:12px 22px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-radius:0 50px 50px 0;box-shadow:0 2px 8px " + p + "25;transition:transform 0.2s ease,box-shadow 0.2s ease,filter 0.2s}" +
     W + " .zcc-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px " + p + "40;filter:brightness(1.06)}" +
     W + " .zcc-btn:active{transform:translateY(0);filter:brightness(0.95)}" +
     W + " .zcc-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;filter:none}" +
     W + " .zcc-btn--error{background:" + e + "10;color:" + e + ";font-weight:700;box-shadow:none}" +
-    W + " .zcc-result{margin-top:14px;padding:14px 16px;border-radius:14px;font-size:14px;line-height:1.6;animation:zcc-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}" +
-    W + " .zcc-result.ok{background:" + s + "08;border:1px solid " + s + "18;box-shadow:0 2px 8px " + s + "08}" +
-    W + " .zcc-result.fail{background:" + e + "08;border:1px solid " + e + "18;box-shadow:0 2px 8px " + e + "08}" +
-    W + " .zcc-wl{margin-top:12px;padding:18px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:14px;border:1px solid #e2e8f0}" +
-    W + " .zcc-wl-input{border-radius:10px;border:1.5px solid #dee2e6;padding:12px 16px;width:100%;display:block;margin-bottom:8px;outline:none;font-size:13px;transition:border-color 0.2s;background:#fff}" +
-    W + " .zcc-wl-btn{border-radius:50px;background:" + p + ";color:#fff;padding:12px;width:100%;font-weight:600;border:none;cursor:pointer;font-size:13px;transition:filter 0.2s,transform 0.2s}" +
+    W + " .zcc-result{margin-top:10px;padding:12px 14px;border-radius:12px;font-size:13.5px;line-height:1.5;animation:zcc-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1);display:flex;gap:10px;align-items:flex-start;justify-content:space-between}" +
+    W + " .zcc-result.ok{background:" + s + "08;border:1px solid " + s + "18}" +
+    W + " .zcc-result.fail{background:" + e + "08;border:1px solid " + e + "18}" +
+    W + " .zcc-wl{margin-top:10px;padding:14px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:12px;border:1px solid #e2e8f0}" +
+    W + " .zcc-wl-input{border-radius:8px;border:1.5px solid #dee2e6;padding:10px 14px;width:100%;display:block;margin-bottom:6px;outline:none;font-size:13px;transition:border-color 0.2s;background:#fff}" +
+    W + " .zcc-wl-btn{border-radius:50px;background:" + p + ";color:#fff;padding:10px;width:100%;font-weight:600;border:none;cursor:pointer;font-size:13px;transition:filter 0.2s,transform 0.2s}" +
     W + " .zcc-wl-btn:hover{filter:brightness(1.06);transform:translateY(-1px)}" +
     buildSharedMetaCss(W, cfg);
   return base + scopeAdminCss(cfg.customCss, wid);
@@ -490,8 +491,8 @@ function FloatingPreview({
                   </svg>
                 </button>
               </div>
-              {/* Panel body — widget with heading hidden (panel header shows it) */}
-              <div style={{ padding: "14px 16px 16px" }}>
+              {/* Panel body — compact */}
+              <div style={{ padding: "10px 14px 14px" }}>
                 <style dangerouslySetInnerHTML={{ __html: `#${wid} .zcc-heading{display:none}` }} />
                 {widgetHtml}
               </div>
@@ -661,8 +662,8 @@ function PopupPreview({
                   </svg>
                 </button>
               </div>
-              {/* Modal body — widget with heading hidden (modal header shows it) */}
-              <div style={{ padding: "14px 20px 20px" }}>
+              {/* Modal body — compact */}
+              <div style={{ padding: "10px 18px 16px" }}>
                 <style dangerouslySetInnerHTML={{ __html: `#${wid} .zcc-heading{display:none}` }} />
                 {widgetHtml}
               </div>
@@ -743,100 +744,92 @@ const WidgetPreview = memo(function WidgetPreview({
         </div>
       )}
 
-      {/* Success result */}
+      {/* Success result — compact card with emoji accent */}
       {previewState === "success" && (
-        <div className="zcc-result ok">
-          <div className="zcc-result-content">
-            <div style={{ fontWeight: 600, color: cfg.successColor }}>
-              {cfg.successMessage}
+        <>
+          <div className="zcc-result ok">
+            <div className="zcc-result-content">
+              <div style={{ fontWeight: 600, color: cfg.successColor, marginBottom: 4 }}>
+                {cfg.successMessage}
+              </div>
+              {cfg.showEta && (
+                <div className="zcc-meta">
+                  <span className="zcc-emoji">🚚</span>
+                  <span>Get it by <strong>Thu, Mar 20</strong>{cfg.showCutoffTime ? " · Order within " : ""}{cfg.showCutoffTime && <strong>5h 30m</strong>}</span>
+                </div>
+              )}
+              {!cfg.showEta && cfg.showCutoffTime && (
+                <div className="zcc-meta">
+                  <span className="zcc-emoji">⏰</span>
+                  <span>Order within <strong>5h 30m</strong> for same-day</span>
+                </div>
+              )}
+              {cfg.showDeliveryDays && (
+                <div className="zcc-meta">
+                  <span className="zcc-emoji">📅</span>
+                  <span>Mon · Tue · Wed · Thu · Fri</span>
+                </div>
+              )}
+              {(cfg.showCod || cfg.showReturnPolicy) && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" as const }}>
+                  {cfg.showCod && (
+                    <div className="zcc-cod zcc-cod--available">
+                      <span className="zcc-emoji">💰</span> COD Available
+                    </div>
+                  )}
+                  {cfg.showReturnPolicy && (
+                    <span style={{ fontSize: 12, color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      ↩️ Returns accepted
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            {cfg.showEta && (
-              <div className="zcc-meta">
-                <span style={{ fontSize: 16 }}>🚚</span>
-                <span>Get it by <strong>Thursday, Mar 20</strong></span>
-              </div>
-            )}
-            {cfg.showCutoffTime && (
-              <div className="zcc-meta">
-                <span style={{ fontSize: 16 }}>⏰</span>
-                <span>Order within <strong>5h 30m</strong> for same-day</span>
-              </div>
-            )}
-            {cfg.showDeliveryDays && (
-              <div className="zcc-meta">
-                <span style={{ fontSize: 16 }}>📅</span>
-                <span>Mon &middot; Tue &middot; Wed &middot; Thu &middot; Fri</span>
-              </div>
-            )}
-            {cfg.showCod && (
-              <div className="zcc-cod zcc-cod--available">
-                <span style={{ fontSize: 14 }}>💰</span> Cash on Delivery Available
-              </div>
-            )}
-            {cfg.showReturnPolicy && (
-              <div className="zcc-meta">
-                <span style={{ fontSize: 16 }}>↩️</span>
-                <span>Returns available for this zipcode</span>
-              </div>
-            )}
           </div>
-          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>🚚</span>
-        </div>
+          {/* Compact inline delivery timeline */}
+          {cfg.showEta && (
+            <div className="zcc-timeline">
+              <div className="zcc-timeline-step zcc-timeline-step--active">
+                <div className="zcc-timeline-icon">🛍️</div>
+                <div className="zcc-timeline-label">Order</div>
+                <div className="zcc-timeline-date">Today</div>
+              </div>
+              <div className="zcc-timeline-line" />
+              <div className="zcc-timeline-step zcc-timeline-step--active">
+                <div className="zcc-timeline-icon">🚛</div>
+                <div className="zcc-timeline-label">Ships</div>
+                <div className="zcc-timeline-date">Mar 19</div>
+              </div>
+              <div className="zcc-timeline-line" />
+              <div className="zcc-timeline-step">
+                <div className="zcc-timeline-icon">📦</div>
+                <div className="zcc-timeline-label">Deliver</div>
+                <div className="zcc-timeline-date">Mar 21</div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Delivery timeline — shown in success state when ETA is enabled */}
-      {previewState === "success" && cfg.showEta && (
-        <div className="zcc-timeline">
-          <div className="zcc-timeline-step zcc-timeline-step--active">
-            <div className="zcc-timeline-icon">🛍️</div>
-            <div className="zcc-timeline-label">Order</div>
-            <div className="zcc-timeline-date">Today</div>
-          </div>
-          <div className="zcc-timeline-line" />
-          <div className="zcc-timeline-step zcc-timeline-step--active">
-            <div className="zcc-timeline-icon">🚛</div>
-            <div className="zcc-timeline-label">Ships</div>
-            <div className="zcc-timeline-date">Mar 19</div>
-          </div>
-          <div className="zcc-timeline-line" />
-          <div className="zcc-timeline-step">
-            <div className="zcc-timeline-icon">📦</div>
-            <div className="zcc-timeline-label">Delivered</div>
-            <div className="zcc-timeline-date">Mar 21</div>
-          </div>
-        </div>
-      )}
-
-      {/* Error / Not Found result */}
+      {/* Error / Not Found result — compact */}
       {(previewState === "error" || previewState === "notfound") && (
         <div className="zcc-result fail">
           <div className="zcc-result-content">
-            <div>
-              <strong style={{ color: cfg.errorColor }}>Sorry,</strong>{" "}
-              {resultMessage ? resultMessage.replace(/^Sorry,?\s*/i, "") : "We don't deliver to this area yet."}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>😞</span>
+              <span>
+                <strong style={{ color: cfg.errorColor }}>Sorry,</strong>{" "}
+                {resultMessage ? resultMessage.replace(/^Sorry,?\s*/i, "") : "We don't deliver to this area yet."}
+              </span>
             </div>
             {cfg.showWaitlistOnFailure && (
               <div className="zcc-wl">
                 <div className="zcc-wl-title">Get notified when we deliver here</div>
-                <input
-                  className="zcc-wl-input"
-                  type="text"
-                  placeholder="Your name"
-                  readOnly
-                />
-                <input
-                  className="zcc-wl-input"
-                  type="email"
-                  placeholder="Your email"
-                  readOnly
-                />
-                <button className="zcc-wl-btn" type="button">
-                  Join Waitlist
-                </button>
+                <input className="zcc-wl-input" type="email" placeholder="Your email" readOnly />
+                <button className="zcc-wl-btn" type="button">Join Waitlist</button>
               </div>
             )}
           </div>
-          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>😞</span>
         </div>
       )}
     </div>
