@@ -16,8 +16,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app?shop=${encodeURIComponent(shop)}`);
   }
 
-  // If the request is inside an iframe (embedded), also redirect
+  // If the request is inside an iframe (embedded), also redirect.
+  // This prevents the bare login form from appearing inside Shopify admin.
   if (url.searchParams.get("embedded") === "1") {
+    throw redirect("/app");
+  }
+
+  // Check for Shopify's sec-fetch headers — if the request comes from an iframe
+  // context (embedded app) but without a shop param, redirect to /app so the
+  // Shopify App Bridge can handle re-authentication automatically.
+  const secFetchDest = request.headers.get("sec-fetch-dest");
+  if (secFetchDest === "iframe") {
     throw redirect("/app");
   }
 
