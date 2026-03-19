@@ -22,15 +22,16 @@ import {
   TextField,
   Select,
   Modal,
-  DataTable,
+  IndexTable,
   EmptyState,
   Divider,
   Box,
   Tooltip,
   Icon,
   Banner,
-  Pagination,
   InlineGrid,
+  Checkbox,
+  type IndexTableProps,
 } from "@shopify/polaris";
 import {
   SearchIcon,
@@ -130,30 +131,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "bulk-notify") {
-    const zipCode = String(formData.get("zipCode") || "")
-      .trim()
-      .toUpperCase();
-    if (!zipCode) return { error: "Zip code is required." };
-
-    const bulkNotifySub = await getShopSubscription(shop);
-    if (PLAN_LIMITS[bulkNotifySub.planTier].maxWaitlist < UNLIMITED) {
-      return { error: "Bulk notify is only available on Pro or Ultimate plans. Please upgrade." };
-    }
-
-    const updated = await db.waitlistEntry.updateMany({
-      where: { shop, zipCode, status: "waiting" },
-      data: { status: "notified" },
-    });
-
-    return {
-      success: true,
-      action: "bulk-notify",
-      count: updated.count,
-      zipCode,
-    };
-  }
-
   if (intent === "notify-zip") {
     const zipCode = String(formData.get("zipCode") || "").trim().toUpperCase();
     if (!zipCode) return { error: "No ZIP code specified." };
@@ -163,12 +140,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Bulk notify is only available on Pro or Ultimate plans. Please upgrade." };
     }
 
-    const entries = await db.waitlistEntry.findMany({
+    const notifyZipEntries = await db.waitlistEntry.findMany({
       where: { shop, zipCode, status: "waiting" },
       select: { id: true, email: true },
     });
 
-    if (entries.length === 0) {
+    if (notifyZipEntries.length === 0) {
       return { action: "notify-zip", zipCode, emails: [] as string[], count: 0 };
     }
 
@@ -177,38 +154,111 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       data: { status: "notified" },
     });
 
-    const emails = entries.map((e) => e.email);
+    const emails = notifyZipEntries.map((e) => e.email);
     return { action: "notify-zip", zipCode, emails, count: emails.length };
   }
 
-  if (intent === "notify-all") {
-    const notifyAllSub = await getShopSubscription(shop);
-    if (PLAN_LIMITS[notifyAllSub.planTier].maxWaitlist < UNLIMITED) {
-      return { error: "Notify All is only available on Pro or Ultimate plans. Please upgrade." };
+  if (intent === "notify-selected-zips") {
+    const zipCodesRaw = String(formData.get("zipCodes") || "");
+    const zipCodes = zipCodesRaw.split(",").map(z => z.trim().toUpperCase()).filter(Boolean);
+    if (zipCodes.length === 0) return { error: "No ZIP codes selected." };
+
+    const notifyZipsSub = await getShopSubscription(shop);
+    if (PLAN_LIMITS[notifyZipsSub.planTier].maxWaitlist < UNLIMITED) {
+      return { error: "Bulk notify is only available on Pro or Ultimate plans. Please upgrade." };
     }
 
-    const allWaiting = await db.waitlistEntry.findMany({
-      where: { shop, status: "waiting" },
+    const waitingEntries = await db.waitlistEntry.findMany({
+      where: { shop, status: "waiting", zipCode: { in: zipCodes } },
       select: { id: true, email: true, zipCode: true },
     });
 
-    if (allWaiting.length === 0) {
-      return { action: "notify-all", emails: [] as string[], count: 0, zipBreakdown: [] as { zipCode: string; count: number }[] };
+    if (waitingEntries.length === 0) {
+      return { action: "notify-selected-zips", emails: [] as string[], count: 0, zipBreakdown: [] as { zipCode: string; count: number }[] };
     }
 
     await db.waitlistEntry.updateMany({
-      where: { shop, status: "waiting" },
+      where: { shop, status: "waiting", zipCode: { in: zipCodes } },
       data: { status: "notified" },
     });
 
     const zipMap = new Map<string, number>();
-    for (const entry of allWaiting) {
+    for (const entry of waitingEntries) {
       zipMap.set(entry.zipCode, (zipMap.get(entry.zipCode) ?? 0) + 1);
     }
     const zipBreakdown = Array.from(zipMap.entries()).map(([zipCode, count]) => ({ zipCode, count }));
-    const emails = allWaiting.map((e) => e.email);
+    const emails = waitingEntries.map(e => e.email);
 
-    return { action: "notify-all", emails, count: emails.length, zipBreakdown };
+    return { action: "notify-selected-zips", emails, count: emails.length, zipBreakdown };
+  }
+
+  if (intent === "bulk-action") {
+    const idsRaw = String(formData.get("ids") || "");
+    const ids = idsRaw.split(",").filter(Boolean);
+    const bulkType = String(formData.get("bulkType") || "");
+
+    if (ids.length === 0) return { error: "No entries selected." };
+
+    const bulkSub = await getShopSubscription(shop);
+
+    if (bulkType === "notify") {
+      if (PLAN_LIMITS[bulkSub.planTier].maxWaitlist < UNLIMITED) {
+        return { error: "Bulk notify is only available on Pro or Ultimate plans. Please upgrade." };
+      }
+      const entriesToNotify = await db.waitlistEntry.findMany({
+        where: { id: { in: ids }, shop, status: "waiting" },
+        select: { id: true, email: true, zipCode: true },
+      });
+      if (entriesToNotify.length === 0) {
+        return { action: "bulk-action-notify", emails: [] as string[], count: 0, zipBreakdown: [] as { zipCode: string; count: number }[] };
+      }
+      await db.waitlistEntry.updateMany({
+        where: { id: { in: ids }, shop, status: "waiting" },
+        data: { status: "notified" },
+      });
+      const zipMap = new Map<string, number>();
+      for (const e of entriesToNotify) {
+        zipMap.set(e.zipCode, (zipMap.get(e.zipCode) ?? 0) + 1);
+      }
+      const zipBreakdown = Array.from(zipMap.entries()).map(([z, c]) => ({ zipCode: z, count: c }));
+      return { action: "bulk-action-notify", emails: entriesToNotify.map(e => e.email), count: entriesToNotify.length, zipBreakdown };
+    }
+
+    if (bulkType === "accept") {
+      const entriesToAccept = await db.waitlistEntry.findMany({
+        where: { id: { in: ids }, shop },
+        select: { id: true, email: true, name: true, zipCode: true },
+      });
+      for (const entry of entriesToAccept) {
+        await db.zipCode.upsert({
+          where: { shop_zipCode: { shop, zipCode: entry.zipCode } },
+          create: { shop, zipCode: entry.zipCode, type: "allowed", isActive: true, label: `Requested by ${entry.name || entry.email}` },
+          update: { type: "allowed", isActive: true },
+        });
+      }
+      await db.waitlistEntry.updateMany({
+        where: { id: { in: ids }, shop },
+        data: { status: "accepted" },
+      });
+      return { success: true, action: "bulk-accepted", count: entriesToAccept.length };
+    }
+
+    if (bulkType === "reject") {
+      const result = await db.waitlistEntry.updateMany({
+        where: { id: { in: ids }, shop },
+        data: { status: "rejected" },
+      });
+      return { success: true, action: "bulk-rejected", count: result.count };
+    }
+
+    if (bulkType === "delete") {
+      const result = await db.waitlistEntry.deleteMany({
+        where: { id: { in: ids }, shop },
+      });
+      return { success: true, action: "bulk-deleted", count: result.count };
+    }
+
+    return { error: "Unknown bulk action type." };
   }
 
   if (intent === "delete-all-notified") {
@@ -225,7 +275,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Entry not found." };
     }
 
-    // Add the ZIP code to the allowed list
     await db.zipCode.upsert({
       where: { shop_zipCode: { shop, zipCode: entry.zipCode } },
       create: {
@@ -241,7 +290,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
 
-    // Mark the waitlist entry as accepted
     await db.waitlistEntry.update({
       where: { id },
       data: { status: "accepted" },
@@ -300,45 +348,59 @@ export default function WaitlistPage() {
     count: number;
   } | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [notifyAllModalOpen, setNotifyAllModalOpen] = useState(false);
-  const [notifyAllResultModalOpen, setNotifyAllResultModalOpen] = useState(false);
-  const [notifyAllResult, setNotifyAllResult] = useState<{
-    emails: string[];
-    count: number;
-    zipBreakdown: { zipCode: string; count: number }[];
-  } | null>(null);
-  const [copyAllSuccess, setCopyAllSuccess] = useState(false);
+
+  // ZIP checkbox selection
+  const [selectedZips, setSelectedZips] = useState<Set<string>>(new Set());
+
+  // IndexTable row selection
+  const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
 
   // Form state
   const [newEmail, setNewEmail] = useState("");
   const [newZipCode, setNewZipCode] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [notifyZip, setNotifyZip] = useState("");
 
   const actionError =
     fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
 
-  useEffect(() => {
-    if (fetcher.data && "action" in fetcher.data) {
-      if (fetcher.data.action === "notify-zip") {
-        const data = fetcher.data as {
-          action: string;
-          zipCode: string;
-          emails: string[];
-          count: number;
-        };
-        setNotifyResult({ zipCode: data.zipCode, emails: data.emails, count: data.count });
-        setNotifyResultModalOpen(true);
-      } else if (fetcher.data.action === "notify-all") {
-        const data = fetcher.data as {
-          action: string;
-          emails: string[];
-          count: number;
-          zipBreakdown: { zipCode: string; count: number }[];
-        };
-        setNotifyAllResult({ emails: data.emails, count: data.count, zipBreakdown: data.zipBreakdown });
-        setNotifyAllResultModalOpen(true);
+  // Compute per-ZIP waiting counts for the "Notify Waitlist" section
+  const zipWaitingCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of entries as WaitlistEntry[]) {
+      if (e.status === "waiting") {
+        map.set(e.zipCode, (map.get(e.zipCode) ?? 0) + 1);
       }
+    }
+    return Array.from(map.entries())
+      .map(([zipCode, count]) => ({ zipCode, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries]);
+
+  // Handle notify results (zip, selected-zips, bulk-action-notify)
+  useEffect(() => {
+    if (
+      fetcher.data &&
+      "action" in fetcher.data &&
+      (fetcher.data.action === "notify-zip" || fetcher.data.action === "notify-selected-zips" || fetcher.data.action === "bulk-action-notify")
+    ) {
+      const data = fetcher.data as {
+        action: string;
+        zipCode?: string;
+        emails: string[];
+        count: number;
+        zipBreakdown?: { zipCode: string; count: number }[];
+      };
+      if (data.action === "notify-zip") {
+        setNotifyResult({ zipCode: data.zipCode!, emails: data.emails, count: data.count });
+      } else {
+        setNotifyResult({
+          zipCode: data.zipBreakdown?.map(z => z.zipCode).join(", ") ?? "",
+          emails: data.emails,
+          count: data.count,
+        });
+      }
+      setNotifyResultModalOpen(true);
+      setSelectedZips(new Set());
     }
   }, [fetcher.data]);
 
@@ -427,20 +489,19 @@ export default function WaitlistPage() {
           shopify.toast.show("Request rejected");
         } else if (fetcherAction === "deleted-notified") {
           shopify.toast.show("Notified entries cleared");
+        } else if (fetcherAction === "bulk-accepted") {
+          const count = "count" in fetcher.data ? fetcher.data.count : 0;
+          shopify.toast.show(`${count} entries accepted`);
+        } else if (fetcherAction === "bulk-rejected") {
+          const count = "count" in fetcher.data ? fetcher.data.count : 0;
+          shopify.toast.show(`${count} entries rejected`);
+        } else if (fetcherAction === "bulk-deleted") {
+          const count = "count" in fetcher.data ? fetcher.data.count : 0;
+          shopify.toast.show(`${count} entries deleted`);
         }
       }
     }
   }, [fetcher.state, fetcher.data, shopify]);
-
-  const handleBulkNotify = useCallback(() => {
-    if (!notifyZip.trim()) return;
-    const fd = new FormData();
-    fd.set("intent", "notify-zip");
-    fd.set("zipCode", notifyZip);
-    fetcher.submit(fd, { method: "POST" });
-    setNotifyModalOpen(false);
-    setNotifyZip("");
-  }, [notifyZip, fetcher]);
 
   const handleCopyEmails = useCallback(() => {
     if (!notifyResult) return;
@@ -449,21 +510,6 @@ export default function WaitlistPage() {
       setTimeout(() => setCopySuccess(false), 2000);
     });
   }, [notifyResult]);
-
-  const handleNotifyAll = useCallback(() => {
-    const fd = new FormData();
-    fd.set("intent", "notify-all");
-    fetcher.submit(fd, { method: "POST" });
-    setNotifyAllModalOpen(false);
-  }, [fetcher]);
-
-  const handleCopyAllEmails = useCallback(() => {
-    if (!notifyAllResult) return;
-    navigator.clipboard.writeText(notifyAllResult.emails.join(", ")).then(() => {
-      setCopyAllSuccess(true);
-      setTimeout(() => setCopyAllSuccess(false), 2000);
-    });
-  }, [notifyAllResult]);
 
   const handleDeleteNotified = useCallback(() => {
     const fd = new FormData();
@@ -491,19 +537,6 @@ export default function WaitlistPage() {
     [fetcher],
   );
 
-  // Compute per-ZIP waiting counts for the "Notify Waitlist" section
-  const zipWaitingCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of entries as WaitlistEntry[]) {
-      if (e.status === "waiting") {
-        map.set(e.zipCode, (map.get(e.zipCode) ?? 0) + 1);
-      }
-    }
-    return Array.from(map.entries())
-      .map(([zipCode, count]) => ({ zipCode, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [entries]);
-
   const handleNotifyZip = useCallback(
     (zipCode: string) => {
       const fd = new FormData();
@@ -512,6 +545,70 @@ export default function WaitlistPage() {
       fetcher.submit(fd, { method: "POST" });
     },
     [fetcher],
+  );
+
+  // ZIP checkbox handlers
+  const handleToggleZip = useCallback((zipCode: string) => {
+    setSelectedZips(prev => {
+      const next = new Set(prev);
+      if (next.has(zipCode)) next.delete(zipCode);
+      else next.add(zipCode);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllZips = useCallback((checked: boolean) => {
+    if (checked) {
+      setSelectedZips(new Set(zipWaitingCounts.map(z => z.zipCode)));
+    } else {
+      setSelectedZips(new Set());
+    }
+  }, [zipWaitingCounts]);
+
+  const selectedZipCustomerCount = useMemo(() => {
+    let count = 0;
+    for (const { zipCode, count: c } of zipWaitingCounts) {
+      if (selectedZips.has(zipCode)) count += c;
+    }
+    return count;
+  }, [selectedZips, zipWaitingCounts]);
+
+  const handleNotifySelectedZips = useCallback(() => {
+    if (selectedZips.size === 0) return;
+    const fd = new FormData();
+    fd.set("intent", "notify-selected-zips");
+    fd.set("zipCodes", Array.from(selectedZips).join(","));
+    fetcher.submit(fd, { method: "POST" });
+    setNotifyModalOpen(false);
+  }, [selectedZips, fetcher]);
+
+  // IndexTable selection handlers
+  const handleSelectionChange = useCallback<NonNullable<IndexTableProps["onSelectionChange"]>>(
+    (selectionType, isSelecting, selection) => {
+      if (selectionType === "all") {
+        setSelectedEntryIds(isSelecting ? filteredEntries.map((e: WaitlistEntry) => e.id) : []);
+      } else if (selectionType === "page") {
+        setSelectedEntryIds(isSelecting ? paginatedEntries.map((e: WaitlistEntry) => e.id) : []);
+      } else if (typeof selection === "string") {
+        setSelectedEntryIds(prev =>
+          isSelecting ? [...prev, selection] : prev.filter(id => id !== selection)
+        );
+      }
+    },
+    [filteredEntries, paginatedEntries],
+  );
+
+  const handleBulkAction = useCallback(
+    (bulkType: string) => {
+      if (selectedEntryIds.length === 0) return;
+      const fd = new FormData();
+      fd.set("intent", "bulk-action");
+      fd.set("ids", selectedEntryIds.join(","));
+      fd.set("bulkType", bulkType);
+      fetcher.submit(fd, { method: "POST" });
+      setSelectedEntryIds([]);
+    },
+    [selectedEntryIds, fetcher],
   );
 
   if (isFreePlan) {
@@ -566,63 +663,28 @@ export default function WaitlistPage() {
     });
   };
 
-  const tableRows = paginatedEntries.map((entry) => [
-    <BlockStack gap="050" key={`name-${entry.id}`}>
-      <Text as="span" fontWeight="semibold">
-        {entry.name || "—"}
-      </Text>
-      <Text as="span" variant="bodySm" tone="subdued">
-        {entry.email}
-      </Text>
-    </BlockStack>,
-    <Text as="span" fontWeight="bold" key={`zip-${entry.id}`}>
-      {entry.zipCode}
-    </Text>,
-    <Box key={`status-${entry.id}`} minWidth="120px">
-      <Select
-        label="Status"
-        labelHidden
-        options={statusOptions}
-        value={entry.status}
-        onChange={(val) => handleStatusChange(entry.id, val)}
-      />
-    </Box>,
-    formatDate(entry.createdAt),
-    <InlineStack gap="200" key={`actions-${entry.id}`} wrap={false}>
-      {entry.status === "waiting" && (
-        <>
-          <Tooltip content="Accept — adds ZIP to allowed list">
-            <Button
-              size="slim"
-              tone="success"
-              onClick={() => handleAccept(entry.id)}
-            >
-              Accept
-            </Button>
-          </Tooltip>
-          <Tooltip content="Reject this request">
-            <Button
-              size="slim"
-              tone="critical"
-              onClick={() => handleReject(entry.id)}
-            >
-              Reject
-            </Button>
-          </Tooltip>
-        </>
-      )}
-      <Tooltip content="Remove from waitlist">
-        <Button
-          size="slim"
-          variant="tertiary"
-          tone="critical"
-          onClick={() => handleDelete(entry.id)}
-          icon={DeleteIcon}
-          accessibilityLabel="Delete"
-        />
-      </Tooltip>
-    </InlineStack>,
-  ]);
+  const bulkActions = [
+    {
+      content: "Accept Selected",
+      onAction: () => handleBulkAction("accept"),
+    },
+    {
+      content: "Reject Selected",
+      onAction: () => handleBulkAction("reject"),
+    },
+    {
+      content: "Delete Selected",
+      onAction: () => handleBulkAction("delete"),
+      destructive: true,
+    },
+  ];
+
+  const promotedBulkActions = [
+    {
+      content: "Notify Selected",
+      onAction: () => handleBulkAction("notify"),
+    },
+  ];
 
   return (
     <Page
@@ -640,17 +702,6 @@ export default function WaitlistPage() {
               icon: PlusIcon,
               onAction: () => setAddModalOpen(true),
             }
-      }
-      secondaryActions={
-        !isStarterPlan
-          ? [
-              {
-                content: "Notify by ZIP",
-                icon: EmailIcon,
-                onAction: () => setNotifyModalOpen(true),
-              },
-            ]
-          : undefined
       }
     >
       <Box paddingBlockEnd="1600">
@@ -762,60 +813,89 @@ export default function WaitlistPage() {
           </Layout.Section>
         )}
 
-        {/* Per-ZIP Notify Section — Pro/Ultimate only */}
+        {/* Per-ZIP Notify Section with checkboxes — Pro/Ultimate only */}
         {!isStarterPlan && zipWaitingCounts.length > 0 && (
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <InlineStack align="space-between" blockAlign="start" wrap={false}>
-                  <BlockStack gap="100">
-                    <Text as="h2" variant="headingMd" fontWeight="semibold">
-                      Notify Waiting Customers by ZIP Code
-                    </Text>
-                    <Text as="p" tone="subdued" variant="bodySm">
-                      Select a ZIP code to retrieve all waiting customer emails
-                      and mark them as notified in one click.
-                    </Text>
-                  </BlockStack>
-                  <Button
-                    variant="primary"
-                    icon={EmailIcon}
-                    onClick={() => setNotifyAllModalOpen(true)}
-                    loading={fetcher.state !== "idle"}
-                    disabled={stats.waiting === 0}
-                  >
-                    {`Notify All ${stats.waiting} Customers`}
-                  </Button>
-                </InlineStack>
+                <BlockStack gap="100">
+                  <Text as="h2" variant="headingMd" fontWeight="semibold">
+                    Notify Waiting Customers by ZIP Code
+                  </Text>
+                  <Text as="p" tone="subdued" variant="bodySm">
+                    Select the ZIP codes where you&apos;ve expanded delivery, then notify all waiting customers in those areas.
+                  </Text>
+                </BlockStack>
                 <Divider />
-                <BlockStack gap="300">
-                  {zipWaitingCounts.map(({ zipCode, count }) => (
-                    <InlineStack
-                      key={zipCode}
-                      align="space-between"
-                      blockAlign="center"
-                      gap="300"
-                      wrap={false}
-                    >
-                      <InlineStack gap="300" blockAlign="center">
-                        <Text as="span" fontWeight="bold">
-                          {zipCode}
-                        </Text>
-                        <Text as="span" tone="subdued" variant="bodySm">
-                          {count} customer{count === 1 ? "" : "s"} waiting
-                        </Text>
-                      </InlineStack>
-                      <Button
-                        size="slim"
-                        icon={EmailIcon}
-                        onClick={() => handleNotifyZip(zipCode)}
-                        loading={fetcher.state !== "idle"}
-                      >
-                        {`Notify ${count} Customer${count === 1 ? "" : "s"}`}
-                      </Button>
+                <BlockStack gap="0">
+                  {/* Select All row */}
+                  <Box padding="200" paddingInlineStart="0">
+                    <InlineStack gap="300" blockAlign="center">
+                      <Checkbox
+                        label=""
+                        labelHidden
+                        checked={selectedZips.size === zipWaitingCounts.length && zipWaitingCounts.length > 0}
+                        onChange={handleSelectAllZips}
+                      />
+                      <Text as="span" fontWeight="semibold" variant="bodySm">
+                        {selectedZips.size === zipWaitingCounts.length && zipWaitingCounts.length > 0
+                          ? `All ${zipWaitingCounts.length} ZIP codes selected (${stats.waiting} customers)`
+                          : `Select all ${zipWaitingCounts.length} ZIP codes`}
+                      </Text>
                     </InlineStack>
+                  </Box>
+                  <Divider />
+                  {/* Individual ZIP rows */}
+                  {zipWaitingCounts.map(({ zipCode, count }) => (
+                    <Box key={zipCode} padding="200" paddingInlineStart="0">
+                      <InlineStack
+                        align="space-between"
+                        blockAlign="center"
+                        gap="300"
+                        wrap={false}
+                      >
+                        <InlineStack gap="300" blockAlign="center">
+                          <Checkbox
+                            label=""
+                            labelHidden
+                            checked={selectedZips.has(zipCode)}
+                            onChange={() => handleToggleZip(zipCode)}
+                          />
+                          <Text as="span" fontWeight="bold">
+                            {zipCode}
+                          </Text>
+                          <Text as="span" tone="subdued" variant="bodySm">
+                            {count} customer{count === 1 ? "" : "s"} waiting
+                          </Text>
+                        </InlineStack>
+                        <Button
+                          size="slim"
+                          icon={EmailIcon}
+                          onClick={() => handleNotifyZip(zipCode)}
+                          loading={fetcher.state !== "idle"}
+                        >
+                          {`Notify ${count}`}
+                        </Button>
+                      </InlineStack>
+                    </Box>
                   ))}
                 </BlockStack>
+                {/* Action button — shown when ZIPs are selected */}
+                {selectedZips.size > 0 && (
+                  <>
+                    <Divider />
+                    <InlineStack align="end">
+                      <Button
+                        variant="primary"
+                        icon={EmailIcon}
+                        onClick={() => setNotifyModalOpen(true)}
+                        loading={fetcher.state !== "idle"}
+                      >
+                        {`Notify ${selectedZipCustomerCount} Customer${selectedZipCustomerCount === 1 ? "" : "s"} in ${selectedZips.size} ZIP Code${selectedZips.size === 1 ? "" : "s"}`}
+                      </Button>
+                    </InlineStack>
+                  </>
+                )}
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -911,46 +991,94 @@ export default function WaitlistPage() {
                 </BlockStack>
               </Box>
             ) : (
-              <>
-                <DataTable
-                  columnContentTypes={[
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                    "text",
-                  ]}
-                  headings={[
-                    "Customer",
-                    "Zip Code",
-                    "Status",
-                    "Date",
-                    "Actions",
-                  ]}
-                  rows={tableRows}
-                  hoverable
-                />
-                {totalPages > 1 && (
-                  <Box padding="400">
-                    <InlineStack align="center" blockAlign="center" gap="300">
-                      <Pagination
-                        hasPrevious={currentPage > 1}
-                        onPrevious={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        hasNext={currentPage < totalPages}
-                        onNext={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                      />
-                      <Text as="span" tone="subdued" variant="bodySm">
-                        Page {currentPage} of {totalPages} (
-                        {filteredEntries.length} results)
+              <IndexTable
+                itemCount={filteredEntries.length}
+                selectedItemsCount={selectedEntryIds.length}
+                onSelectionChange={handleSelectionChange}
+                headings={[
+                  { title: "Customer" },
+                  { title: "ZIP Code" },
+                  { title: "Status" },
+                  { title: "Date" },
+                  { title: "Actions" },
+                ]}
+                bulkActions={bulkActions}
+                promotedBulkActions={promotedBulkActions}
+                pagination={totalPages > 1 ? {
+                  hasPrevious: currentPage > 1,
+                  onPrevious: () => setCurrentPage(p => Math.max(1, p - 1)),
+                  hasNext: currentPage < totalPages,
+                  onNext: () => setCurrentPage(p => Math.min(totalPages, p + 1)),
+                  label: `Page ${currentPage} of ${totalPages} (${filteredEntries.length} results)`,
+                } : undefined}
+              >
+                {paginatedEntries.map((entry, index) => (
+                  <IndexTable.Row
+                    key={entry.id}
+                    id={entry.id}
+                    position={index}
+                    selected={selectedEntryIds.includes(entry.id)}
+                  >
+                    <IndexTable.Cell>
+                      <BlockStack gap="050">
+                        <Text as="span" fontWeight="semibold">
+                          {entry.name || "—"}
+                        </Text>
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          {entry.email}
+                        </Text>
+                      </BlockStack>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Text as="span" fontWeight="bold">
+                        {entry.zipCode}
                       </Text>
-                    </InlineStack>
-                  </Box>
-                )}
-              </>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Box minWidth="120px">
+                        <Select
+                          label="Status"
+                          labelHidden
+                          options={statusOptions}
+                          value={entry.status}
+                          onChange={(val) => handleStatusChange(entry.id, val)}
+                        />
+                      </Box>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      {formatDate(entry.createdAt)}
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <InlineStack gap="200" wrap={false}>
+                        {entry.status === "waiting" && (
+                          <>
+                            <Tooltip content="Accept — adds ZIP to allowed list">
+                              <Button size="slim" tone="success" onClick={() => handleAccept(entry.id)}>
+                                Accept
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content="Reject this request">
+                              <Button size="slim" tone="critical" onClick={() => handleReject(entry.id)}>
+                                Reject
+                              </Button>
+                            </Tooltip>
+                          </>
+                        )}
+                        <Tooltip content="Remove from waitlist">
+                          <Button
+                            size="slim"
+                            variant="tertiary"
+                            tone="critical"
+                            onClick={() => handleDelete(entry.id)}
+                            icon={DeleteIcon}
+                            accessibilityLabel="Delete"
+                          />
+                        </Tooltip>
+                      </InlineStack>
+                    </IndexTable.Cell>
+                  </IndexTable.Row>
+                ))}
+              </IndexTable>
             )}
           </Card>
         </Layout.Section>
@@ -1010,144 +1138,37 @@ export default function WaitlistPage() {
         </Modal.Section>
       </Modal>
 
-      {/* Bulk Notify Modal */}
+      {/* Confirm Notify Selected ZIP Codes Modal */}
       <Modal
         open={notifyModalOpen}
-        onClose={() => {
-          setNotifyModalOpen(false);
-          setNotifyZip("");
-        }}
-        title="Notify Waitlist by Zip Code"
+        onClose={() => setNotifyModalOpen(false)}
+        title="Confirm Notify Selected ZIP Codes"
         primaryAction={{
-          content: "Notify Waiting Customers",
-          onAction: handleBulkNotify,
-          disabled: !notifyZip.trim(),
+          content: `Notify ${selectedZipCustomerCount} Customer${selectedZipCustomerCount === 1 ? "" : "s"}`,
+          onAction: handleNotifySelectedZips,
           loading: fetcher.state !== "idle",
         }}
-        secondaryActions={[
-          {
-            content: "Cancel",
-            onAction: () => {
-              setNotifyModalOpen(false);
-              setNotifyZip("");
-            },
-          },
-        ]}
-      >
-        <Modal.Section>
-          <BlockStack gap="400">
-            {actionError && <Banner tone="critical">{actionError}</Banner>}
-            <Text as="p">
-              Enter a zip code to mark all waiting customers for that area as
-              &quot;Notified&quot; and retrieve their email addresses. Use this
-              when you&apos;ve expanded delivery to a new area and want to
-              contact waitlisted customers.
-            </Text>
-            <TextField
-              label="Zip Code"
-              value={notifyZip}
-              onChange={setNotifyZip}
-              placeholder="e.g. 33101"
-              autoComplete="off"
-            />
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
-
-      {/* Notify All Confirmation Modal */}
-      <Modal
-        open={notifyAllModalOpen}
-        onClose={() => setNotifyAllModalOpen(false)}
-        title="Notify All Waiting Customers"
-        primaryAction={{
-          content: `Notify All ${stats.waiting} Customers`,
-          onAction: handleNotifyAll,
-          loading: fetcher.state !== "idle",
-        }}
-        secondaryActions={[{ content: "Cancel", onAction: () => setNotifyAllModalOpen(false) }]}
+        secondaryActions={[{ content: "Cancel", onAction: () => setNotifyModalOpen(false) }]}
       >
         <Modal.Section>
           <BlockStack gap="400">
             <Banner tone="warning">
-              This will mark all {stats.waiting} waiting customer{stats.waiting === 1 ? "" : "s"} across {zipWaitingCounts.length} ZIP code{zipWaitingCounts.length === 1 ? "" : "s"} as notified. This action cannot be undone.
+              This will mark {selectedZipCustomerCount} waiting customer{selectedZipCustomerCount === 1 ? "" : "s"} across {selectedZips.size} ZIP code{selectedZips.size === 1 ? "" : "s"} as notified. This action cannot be undone.
             </Banner>
             <Text as="p">
-              After confirming, you&apos;ll receive all customer email addresses so you can contact them through your preferred email service.
+              After confirming, you&apos;ll receive all customer email addresses to contact them through your preferred email service.
             </Text>
             <BlockStack gap="200">
-              <Text as="h3" variant="headingSm">ZIP Code Breakdown:</Text>
-              {zipWaitingCounts.map(({ zipCode, count }) => (
-                <InlineStack key={zipCode} gap="200">
-                  <Text as="span" fontWeight="bold">{zipCode}</Text>
-                  <Text as="span" tone="subdued">{count} customer{count === 1 ? "" : "s"}</Text>
-                </InlineStack>
-              ))}
+              <Text as="h3" variant="headingSm">Selected ZIP Codes:</Text>
+              {zipWaitingCounts
+                .filter(z => selectedZips.has(z.zipCode))
+                .map(({ zipCode, count }) => (
+                  <InlineStack key={zipCode} gap="200">
+                    <Text as="span" fontWeight="bold">{zipCode}</Text>
+                    <Text as="span" tone="subdued">{count} customer{count === 1 ? "" : "s"}</Text>
+                  </InlineStack>
+                ))}
             </BlockStack>
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
-
-      {/* Notify All Result Modal */}
-      <Modal
-        open={notifyAllResultModalOpen}
-        onClose={() => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); }}
-        title="All Waiting Customers Notified"
-        primaryAction={{
-          content: copyAllSuccess ? "Copied!" : "Copy All Emails",
-          onAction: handleCopyAllEmails,
-          disabled: !notifyAllResult || notifyAllResult.emails.length === 0,
-        }}
-        secondaryActions={
-          notifyAllResult && notifyAllResult.emails.length > 0 && notifyAllResult.emails.length <= 50
-            ? [
-                {
-                  content: "Open in Email Client",
-                  url: `mailto:${notifyAllResult.emails.join(",")}?subject=${encodeURIComponent("Great news! We now deliver to your area")}&body=${encodeURIComponent("Hi!\n\nWe wanted to let you know that we now deliver to your area.\n\nThank you for your patience!")}`,
-                  external: true,
-                },
-                { content: "Close", onAction: () => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); } },
-              ]
-            : [{ content: "Close", onAction: () => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); } }]
-        }
-      >
-        <Modal.Section>
-          <BlockStack gap="400">
-            {notifyAllResult && notifyAllResult.count > 0 ? (
-              <>
-                <Banner tone="success">
-                  Successfully notified {notifyAllResult.count} customer{notifyAllResult.count === 1 ? "" : "s"} across {notifyAllResult.zipBreakdown.length} ZIP code{notifyAllResult.zipBreakdown.length === 1 ? "" : "s"}.
-                </Banner>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingSm">Breakdown by ZIP Code:</Text>
-                  {notifyAllResult.zipBreakdown.map(({ zipCode, count }) => (
-                    <InlineStack key={zipCode} gap="200">
-                      <Text as="span" fontWeight="bold">{zipCode}</Text>
-                      <Text as="span" tone="subdued">{count} notified</Text>
-                    </InlineStack>
-                  ))}
-                </BlockStack>
-                <Text as="p">
-                  Copy these email addresses and paste them into your preferred email service to contact all notified customers.
-                </Text>
-                <TextField
-                  label="All Customer Emails"
-                  value={notifyAllResult.emails.join(", ")}
-                  onChange={() => {}}
-                  multiline={4}
-                  autoComplete="off"
-                  readOnly
-                />
-                {notifyAllResult.emails.length > 50 && (
-                  <Banner tone="info">
-                    Too many emails for the &quot;Open in Email Client&quot; option. Please copy and paste the emails into your email service instead.
-                  </Banner>
-                )}
-              </>
-            ) : (
-              <Banner tone="info">
-                No customers with &quot;Waiting&quot; status found. They may have already been notified.
-              </Banner>
-            )}
           </BlockStack>
         </Modal.Section>
       </Modal>
