@@ -181,6 +181,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return { action: "notify-zip", zipCode, emails, count: emails.length };
   }
 
+  if (intent === "notify-all") {
+    const notifyAllSub = await getShopSubscription(shop);
+    if (PLAN_LIMITS[notifyAllSub.planTier].maxWaitlist < UNLIMITED) {
+      return { error: "Notify All is only available on Pro or Ultimate plans. Please upgrade." };
+    }
+
+    const allWaiting = await db.waitlistEntry.findMany({
+      where: { shop, status: "waiting" },
+      select: { id: true, email: true, zipCode: true },
+    });
+
+    if (allWaiting.length === 0) {
+      return { action: "notify-all", emails: [] as string[], count: 0, zipBreakdown: [] as { zipCode: string; count: number }[] };
+    }
+
+    await db.waitlistEntry.updateMany({
+      where: { shop, status: "waiting" },
+      data: { status: "notified" },
+    });
+
+    const zipMap = new Map<string, number>();
+    for (const entry of allWaiting) {
+      zipMap.set(entry.zipCode, (zipMap.get(entry.zipCode) ?? 0) + 1);
+    }
+    const zipBreakdown = Array.from(zipMap.entries()).map(([zipCode, count]) => ({ zipCode, count }));
+    const emails = allWaiting.map((e) => e.email);
+
+    return { action: "notify-all", emails, count: emails.length, zipBreakdown };
+  }
+
   if (intent === "delete-all-notified") {
     const deleted = await db.waitlistEntry.deleteMany({
       where: { shop, status: "notified" },
@@ -270,6 +300,14 @@ export default function WaitlistPage() {
     count: number;
   } | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [notifyAllModalOpen, setNotifyAllModalOpen] = useState(false);
+  const [notifyAllResultModalOpen, setNotifyAllResultModalOpen] = useState(false);
+  const [notifyAllResult, setNotifyAllResult] = useState<{
+    emails: string[];
+    count: number;
+    zipBreakdown: { zipCode: string; count: number }[];
+  } | null>(null);
+  const [copyAllSuccess, setCopyAllSuccess] = useState(false);
 
   // Form state
   const [newEmail, setNewEmail] = useState("");
@@ -281,19 +319,26 @@ export default function WaitlistPage() {
     fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
 
   useEffect(() => {
-    if (
-      fetcher.data &&
-      "action" in fetcher.data &&
-      fetcher.data.action === "notify-zip"
-    ) {
-      const data = fetcher.data as {
-        action: string;
-        zipCode: string;
-        emails: string[];
-        count: number;
-      };
-      setNotifyResult({ zipCode: data.zipCode, emails: data.emails, count: data.count });
-      setNotifyResultModalOpen(true);
+    if (fetcher.data && "action" in fetcher.data) {
+      if (fetcher.data.action === "notify-zip") {
+        const data = fetcher.data as {
+          action: string;
+          zipCode: string;
+          emails: string[];
+          count: number;
+        };
+        setNotifyResult({ zipCode: data.zipCode, emails: data.emails, count: data.count });
+        setNotifyResultModalOpen(true);
+      } else if (fetcher.data.action === "notify-all") {
+        const data = fetcher.data as {
+          action: string;
+          emails: string[];
+          count: number;
+          zipBreakdown: { zipCode: string; count: number }[];
+        };
+        setNotifyAllResult({ emails: data.emails, count: data.count, zipBreakdown: data.zipBreakdown });
+        setNotifyAllResultModalOpen(true);
+      }
     }
   }, [fetcher.data]);
 
@@ -404,6 +449,21 @@ export default function WaitlistPage() {
       setTimeout(() => setCopySuccess(false), 2000);
     });
   }, [notifyResult]);
+
+  const handleNotifyAll = useCallback(() => {
+    const fd = new FormData();
+    fd.set("intent", "notify-all");
+    fetcher.submit(fd, { method: "POST" });
+    setNotifyAllModalOpen(false);
+  }, [fetcher]);
+
+  const handleCopyAllEmails = useCallback(() => {
+    if (!notifyAllResult) return;
+    navigator.clipboard.writeText(notifyAllResult.emails.join(", ")).then(() => {
+      setCopyAllSuccess(true);
+      setTimeout(() => setCopyAllSuccess(false), 2000);
+    });
+  }, [notifyAllResult]);
 
   const handleDeleteNotified = useCallback(() => {
     const fd = new FormData();
@@ -707,15 +767,26 @@ export default function WaitlistPage() {
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <BlockStack gap="100">
-                  <Text as="h2" variant="headingMd" fontWeight="semibold">
-                    Notify Waiting Customers by ZIP Code
-                  </Text>
-                  <Text as="p" tone="subdued" variant="bodySm">
-                    Select a ZIP code to retrieve all waiting customer emails
-                    and mark them as notified in one click.
-                  </Text>
-                </BlockStack>
+                <InlineStack align="space-between" blockAlign="start" wrap={false}>
+                  <BlockStack gap="100">
+                    <Text as="h2" variant="headingMd" fontWeight="semibold">
+                      Notify Waiting Customers by ZIP Code
+                    </Text>
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      Select a ZIP code to retrieve all waiting customer emails
+                      and mark them as notified in one click.
+                    </Text>
+                  </BlockStack>
+                  <Button
+                    variant="primary"
+                    icon={EmailIcon}
+                    onClick={() => setNotifyAllModalOpen(true)}
+                    loading={fetcher.state !== "idle"}
+                    disabled={stats.waiting === 0}
+                  >
+                    {`Notify All ${stats.waiting} Customers`}
+                  </Button>
+                </InlineStack>
                 <Divider />
                 <BlockStack gap="300">
                   {zipWaitingCounts.map(({ zipCode, count }) => (
@@ -979,6 +1050,104 @@ export default function WaitlistPage() {
               placeholder="e.g. 33101"
               autoComplete="off"
             />
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
+
+      {/* Notify All Confirmation Modal */}
+      <Modal
+        open={notifyAllModalOpen}
+        onClose={() => setNotifyAllModalOpen(false)}
+        title="Notify All Waiting Customers"
+        primaryAction={{
+          content: `Notify All ${stats.waiting} Customers`,
+          onAction: handleNotifyAll,
+          loading: fetcher.state !== "idle",
+        }}
+        secondaryActions={[{ content: "Cancel", onAction: () => setNotifyAllModalOpen(false) }]}
+      >
+        <Modal.Section>
+          <BlockStack gap="400">
+            <Banner tone="warning">
+              This will mark all {stats.waiting} waiting customer{stats.waiting === 1 ? "" : "s"} across {zipWaitingCounts.length} ZIP code{zipWaitingCounts.length === 1 ? "" : "s"} as notified. This action cannot be undone.
+            </Banner>
+            <Text as="p">
+              After confirming, you&apos;ll receive all customer email addresses so you can contact them through your preferred email service.
+            </Text>
+            <BlockStack gap="200">
+              <Text as="h3" variant="headingSm">ZIP Code Breakdown:</Text>
+              {zipWaitingCounts.map(({ zipCode, count }) => (
+                <InlineStack key={zipCode} gap="200">
+                  <Text as="span" fontWeight="bold">{zipCode}</Text>
+                  <Text as="span" tone="subdued">{count} customer{count === 1 ? "" : "s"}</Text>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
+
+      {/* Notify All Result Modal */}
+      <Modal
+        open={notifyAllResultModalOpen}
+        onClose={() => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); }}
+        title="All Waiting Customers Notified"
+        primaryAction={{
+          content: copyAllSuccess ? "Copied!" : "Copy All Emails",
+          onAction: handleCopyAllEmails,
+          disabled: !notifyAllResult || notifyAllResult.emails.length === 0,
+        }}
+        secondaryActions={
+          notifyAllResult && notifyAllResult.emails.length > 0 && notifyAllResult.emails.length <= 50
+            ? [
+                {
+                  content: "Open in Email Client",
+                  url: `mailto:${notifyAllResult.emails.join(",")}?subject=${encodeURIComponent("Great news! We now deliver to your area")}&body=${encodeURIComponent("Hi!\n\nWe wanted to let you know that we now deliver to your area.\n\nThank you for your patience!")}`,
+                  external: true,
+                },
+                { content: "Close", onAction: () => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); } },
+              ]
+            : [{ content: "Close", onAction: () => { setNotifyAllResultModalOpen(false); setCopyAllSuccess(false); } }]
+        }
+      >
+        <Modal.Section>
+          <BlockStack gap="400">
+            {notifyAllResult && notifyAllResult.count > 0 ? (
+              <>
+                <Banner tone="success">
+                  Successfully notified {notifyAllResult.count} customer{notifyAllResult.count === 1 ? "" : "s"} across {notifyAllResult.zipBreakdown.length} ZIP code{notifyAllResult.zipBreakdown.length === 1 ? "" : "s"}.
+                </Banner>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingSm">Breakdown by ZIP Code:</Text>
+                  {notifyAllResult.zipBreakdown.map(({ zipCode, count }) => (
+                    <InlineStack key={zipCode} gap="200">
+                      <Text as="span" fontWeight="bold">{zipCode}</Text>
+                      <Text as="span" tone="subdued">{count} notified</Text>
+                    </InlineStack>
+                  ))}
+                </BlockStack>
+                <Text as="p">
+                  Copy these email addresses and paste them into your preferred email service to contact all notified customers.
+                </Text>
+                <TextField
+                  label="All Customer Emails"
+                  value={notifyAllResult.emails.join(", ")}
+                  onChange={() => {}}
+                  multiline={4}
+                  autoComplete="off"
+                  readOnly
+                />
+                {notifyAllResult.emails.length > 50 && (
+                  <Banner tone="info">
+                    Too many emails for the &quot;Open in Email Client&quot; option. Please copy and paste the emails into your email service instead.
+                  </Banner>
+                )}
+              </>
+            ) : (
+              <Banner tone="info">
+                No customers with &quot;Waiting&quot; status found. They may have already been notified.
+              </Banner>
+            )}
           </BlockStack>
         </Modal.Section>
       </Modal>
