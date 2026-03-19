@@ -327,7 +327,7 @@ export default function HelpPage() {
                     Email Support
                   </Button>
                   <Button
-                    url="/app/feature-requests"
+                    onClick={() => navigate("/app/feature-requests")}
                   >
                     Feature Requests
                   </Button>
