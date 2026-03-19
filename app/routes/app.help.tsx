@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useNavigate, useRouteError } from "react-router";
 import { authenticate } from "../shopify.server";
@@ -15,7 +16,10 @@ import {
   Box,
   Banner,
   Badge,
+  Collapsible,
+  Icon,
 } from "@shopify/polaris";
+import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 // ---------------------------------------------------------------------------
 // Loader — auth only, no data needed
@@ -32,6 +36,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function HelpPage() {
   const navigate = useNavigate();
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const handleFaqToggle = useCallback((index: number) => {
+    setOpenFaq((prev) => (prev === index ? null : index));
+  }, []);
 
   const faqs: Array<{ question: string; answer: string }> = [
     {
@@ -185,24 +194,72 @@ export default function HelpPage() {
               Section 2: Common Questions
           ---------------------------------------------------------------- */}
           <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
+            <Card padding="0">
+              <Box padding="400" paddingBlockEnd="200">
                 <Text as="h2" variant="headingMd">
                   Common Questions
                 </Text>
-                <Divider />
-                {faqs.map((faq, index) => (
-                  <BlockStack key={faq.question} gap="200">
-                    {index > 0 && <Divider />}
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      {faq.question}
-                    </Text>
-                    <Text as="p" tone="subdued" variant="bodyMd">
-                      {faq.answer}
-                    </Text>
-                  </BlockStack>
-                ))}
-              </BlockStack>
+              </Box>
+              <Divider />
+              {faqs.map((faq, index) => (
+                <div key={faq.question}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleFaqToggle(index)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleFaqToggle(index);
+                      }
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      padding: "var(--p-space-400)",
+                      background:
+                        openFaq === index
+                          ? "var(--p-color-bg-surface-hover)"
+                          : "transparent",
+                      transition: "background 150ms ease",
+                    }}
+                  >
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">
+                        {faq.question}
+                      </Text>
+                      <Box>
+                        <Icon
+                          source={
+                            openFaq === index
+                              ? ChevronUpIcon
+                              : ChevronDownIcon
+                          }
+                          tone="subdued"
+                        />
+                      </Box>
+                    </InlineStack>
+                  </div>
+                  <Collapsible
+                    open={openFaq === index}
+                    id={`faq-${index}`}
+                    transition={{
+                      duration: "200ms",
+                      timingFunction: "ease-in-out",
+                    }}
+                  >
+                    <Box
+                      padding="400"
+                      paddingBlockStart="0"
+                      background="bg-surface-hover"
+                    >
+                      <Text as="p" tone="subdued" variant="bodyMd">
+                        {faq.answer}
+                      </Text>
+                    </Box>
+                  </Collapsible>
+                  {index < faqs.length - 1 && <Divider />}
+                </div>
+              ))}
             </Card>
           </Layout.Section>
 
