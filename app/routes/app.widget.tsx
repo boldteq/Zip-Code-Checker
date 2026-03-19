@@ -330,6 +330,7 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
   const p = cfg.primaryColor;
   const s = cfg.successColor;
   const e = cfg.errorColor;
+  const btnRadius = (cfg.borderRadius || "10") + "px";
   const base =
     "@keyframes zcc-slide-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}" +
     "@keyframes zcc-scale-in{from{transform:scale(0.92);opacity:0}to{transform:scale(1);opacity:1}}" +
@@ -339,13 +340,13 @@ function buildWidgetCss(wid: string, cfg: WidgetConfig): string {
     W + " .zcc-heading{font-size:15px;font-weight:700;letter-spacing:-0.01em;margin:0;color:" + cfg.textColor + ";display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,0.06);margin-bottom:12px}" +
     W + " .zcc-heading-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg," + p + "18," + p + "08);flex-shrink:0}" +
     W + " .zcc-heading-icon svg{width:14px;height:14px}" +
-    W + " .zcc-search-bar{display:flex;background:#f8f9fa;border:1px solid #e8e8e8;border-radius:50px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s}" +
-    W + " .zcc-search-bar:focus-within{border-color:" + p + ";box-shadow:0 0 0 3px " + p + "15}" +
-    W + " .zcc-input{padding:12px 16px;font-size:14px;border:none;outline:none;flex:1;background:transparent;color:" + cfg.textColor + ";min-width:0}" +
+    W + " .zcc-search-bar{display:flex;flex-direction:column;gap:10px}" +
+    W + " .zcc-input{width:100%;padding:12px 16px;font-size:14px;border:1.5px solid #e0e0e0;border-radius:" + btnRadius + ";outline:none;background:#fafbfb;color:" + cfg.textColor + ";transition:border-color 0.2s,box-shadow 0.2s}" +
+    W + " .zcc-input:focus{border-color:" + p + ";box-shadow:0 0 0 3px " + p + "15}" +
     W + " .zcc-input::placeholder{color:#9ca3af}" +
-    W + " .zcc-btn{background:" + p + ";color:#fff;border:none;padding:12px 22px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-radius:0 50px 50px 0;box-shadow:0 2px 8px " + p + "25;transition:transform 0.2s ease,box-shadow 0.2s ease,filter 0.2s}" +
-    W + " .zcc-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px " + p + "40;filter:brightness(1.06)}" +
-    W + " .zcc-btn:active{transform:translateY(0);filter:brightness(0.95)}" +
+    W + " .zcc-btn{width:100%;background:" + p + ";color:#fff;border:none;padding:12px;font-size:14px;font-weight:600;cursor:pointer;border-radius:" + btnRadius + ";box-shadow:0 2px 8px " + p + "25;transition:filter 0.2s,box-shadow 0.2s,transform 0.2s;display:flex;align-items:center;justify-content:center;gap:6px}" +
+    W + " .zcc-btn:hover{filter:brightness(1.06);box-shadow:0 4px 14px " + p + "40;transform:translateY(-1px)}" +
+    W + " .zcc-btn:active{filter:brightness(0.95);transform:translateY(0)}" +
     W + " .zcc-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;filter:none}" +
     W + " .zcc-btn--error{background:" + e + "10;color:" + e + ";font-weight:700;box-shadow:none}" +
     W + " .zcc-result{margin-top:10px;padding:12px 14px;border-radius:12px;font-size:13.5px;line-height:1.5;animation:zcc-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1);display:flex;gap:10px;align-items:flex-start;justify-content:space-between}" +
