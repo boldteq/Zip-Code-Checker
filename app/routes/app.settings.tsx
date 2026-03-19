@@ -11,6 +11,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getShopSubscription } from "../billing.server";
 import { PLAN_LIMITS, UNLIMITED } from "../plans";
 import db from "../db.server";
+import { sendTestEmail } from "../email.server";
 import {
   Page,
   Layout,
@@ -86,6 +87,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { success: true, intent };
     }
 
+    if (intent === "send-test-email") {
+      const testEmail = (formData.get("testEmail") as string | null) ?? "";
+      if (!testEmail) return { error: "No email address provided." };
+      const sent = await sendTestEmail(testEmail);
+      return sent
+        ? { success: true, intent }
+        : { error: "Failed to send test email. Check your Postmark API key and sender email." };
+    }
+
     return { error: "Unknown intent" };
   } catch {
     return { error: "Failed to save settings. Please try again." };
@@ -106,6 +116,7 @@ export default function SettingsPage() {
   // Fetchers — one per save section so loading states stay independent
   const behaviorFetcher = useFetcher<typeof action>();
   const notificationFetcher = useFetcher<typeof action>();
+  const testEmailFetcher = useFetcher<typeof action>();
 
   // Local controlled state
   const [behaviorValue, setBehaviorValue] = useState(defaultBehavior);
@@ -140,6 +151,16 @@ export default function SettingsPage() {
     }
   }, [notificationFetcher.data, shopify]);
 
+  useEffect(() => {
+    if (
+      testEmailFetcher.data &&
+      "success" in testEmailFetcher.data &&
+      testEmailFetcher.data.success
+    ) {
+      shopify.toast.show("Test email sent!");
+    }
+  }, [testEmailFetcher.data, shopify]);
+
   const handleBehaviorChange = useCallback(
     (value: string) => setBehaviorValue(value),
     [],
@@ -169,6 +190,14 @@ export default function SettingsPage() {
     setBehaviorValue(defaultBehavior);
     setEmailValue(notificationEmail);
   }, [defaultBehavior, notificationEmail]);
+
+  const handleSendTestEmail = useCallback(() => {
+    if (!emailValue) return;
+    const fd = new FormData();
+    fd.append("intent", "send-test-email");
+    fd.append("testEmail", emailValue);
+    testEmailFetcher.submit(fd, { method: "post" });
+  }, [emailValue, testEmailFetcher]);
 
   const behaviorOptions = [
     {
@@ -313,6 +342,13 @@ export default function SettingsPage() {
                       {notificationFetcher.data.error}
                     </Banner>
                   )}
+                {testEmailFetcher.data &&
+                  "error" in testEmailFetcher.data &&
+                  testEmailFetcher.data.error && (
+                    <Banner tone="critical">
+                      {testEmailFetcher.data.error}
+                    </Banner>
+                  )}
                 <TextField
                   label="Notification email"
                   type="email"
@@ -324,6 +360,13 @@ export default function SettingsPage() {
                 <Text as="p" tone="subdued" variant="bodySm">
                   If left empty, no email notifications are sent.
                 </Text>
+                <Button
+                  onClick={handleSendTestEmail}
+                  loading={testEmailFetcher.state !== "idle"}
+                  disabled={!emailValue}
+                >
+                  Send Test Email
+                </Button>
               </BlockStack>
             </Card>
           </Layout.Section>

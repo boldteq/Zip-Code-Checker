@@ -17,6 +17,10 @@ import db from "../db.server";
 import { getShopSubscription } from "../billing.server";
 import { UNLIMITED } from "../plans";
 import { normalizeZipCode } from "../utils/zip";
+import {
+  sendWaitlistConfirmation,
+  sendMerchantWaitlistAlert,
+} from "../email.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -124,25 +128,45 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   try {
+    const normalizedZip = normalizeZipCode(zip);
+
     await db.waitlistEntry.upsert({
       where: {
         shop_email_zipCode: {
           shop,
           email,
-          zipCode: normalizeZipCode(zip),
+          zipCode: normalizedZip,
         },
       },
       create: {
         shop,
         email,
         name: name ? name.trim().substring(0, 100) : null,
-        zipCode: normalizeZipCode(zip),
+        zipCode: normalizedZip,
         status: "waiting",
       },
       update: {
         status: "waiting",
       },
     });
+
+    // Fire-and-forget: send confirmation to customer
+    sendWaitlistConfirmation(email, normalizedZip, shop).catch(() => {});
+
+    // Fire-and-forget: notify merchant if notificationEmail is set
+    db.shopSettings
+      .findUnique({ where: { shop }, select: { notificationEmail: true } })
+      .then((settings) => {
+        if (settings?.notificationEmail) {
+          sendMerchantWaitlistAlert(
+            settings.notificationEmail,
+            email,
+            normalizedZip,
+            shop,
+          ).catch(() => {});
+        }
+      })
+      .catch(() => {});
 
     return new Response(
       JSON.stringify({

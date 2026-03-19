@@ -11,6 +11,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
 import { getShopSubscription } from "../billing.server";
 import { PLAN_LIMITS, UNLIMITED } from "../plans";
+import { sendZipAvailableNotification } from "../email.server";
 import {
   Page,
   Layout,
@@ -155,7 +156,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
 
     const emails = notifyZipEntries.map((e) => e.email);
-    return { action: "notify-zip", zipCode, emails, count: emails.length };
+    const shopUrl = `https://${shop}`;
+    const emailResults = await Promise.allSettled(
+      emails.map((email) =>
+        sendZipAvailableNotification(email, zipCode, shop, shopUrl),
+      ),
+    );
+    const emailsSent = emailResults.filter(
+      (r) => r.status === "fulfilled" && r.value,
+    ).length;
+
+    return { action: "notify-zip", zipCode, emails, count: emails.length, emailsSent };
   }
 
   if (intent === "notify-selected-zips") {
@@ -189,7 +200,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const zipBreakdown = Array.from(zipMap.entries()).map(([zipCode, count]) => ({ zipCode, count }));
     const emails = waitingEntries.map(e => e.email);
 
-    return { action: "notify-selected-zips", emails, count: emails.length, zipBreakdown };
+    const shopUrl = `https://${shop}`;
+    const emailResults = await Promise.allSettled(
+      waitingEntries.map((e) =>
+        sendZipAvailableNotification(e.email, e.zipCode, shop, shopUrl),
+      ),
+    );
+    const emailsSent = emailResults.filter(
+      (r) => r.status === "fulfilled" && r.value,
+    ).length;
+
+    return { action: "notify-selected-zips", emails, count: emails.length, zipBreakdown, emailsSent };
   }
 
   if (intent === "bulk-action") {
@@ -221,7 +242,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         zipMap.set(e.zipCode, (zipMap.get(e.zipCode) ?? 0) + 1);
       }
       const zipBreakdown = Array.from(zipMap.entries()).map(([z, c]) => ({ zipCode: z, count: c }));
-      return { action: "bulk-action-notify", emails: entriesToNotify.map(e => e.email), count: entriesToNotify.length, zipBreakdown };
+
+      const shopUrl = `https://${shop}`;
+      const emailResults = await Promise.allSettled(
+        entriesToNotify.map((e) =>
+          sendZipAvailableNotification(e.email, e.zipCode, shop, shopUrl),
+        ),
+      );
+      const emailsSent = emailResults.filter(
+        (r) => r.status === "fulfilled" && r.value,
+      ).length;
+
+      return { action: "bulk-action-notify", emails: entriesToNotify.map(e => e.email), count: entriesToNotify.length, zipBreakdown, emailsSent };
     }
 
     if (bulkType === "accept") {
@@ -346,6 +378,7 @@ export default function WaitlistPage() {
     zipCode: string;
     emails: string[];
     count: number;
+    emailsSent?: number;
   } | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -388,15 +421,17 @@ export default function WaitlistPage() {
         zipCode?: string;
         emails: string[];
         count: number;
+        emailsSent?: number;
         zipBreakdown?: { zipCode: string; count: number }[];
       };
       if (data.action === "notify-zip") {
-        setNotifyResult({ zipCode: data.zipCode!, emails: data.emails, count: data.count });
+        setNotifyResult({ zipCode: data.zipCode!, emails: data.emails, count: data.count, emailsSent: data.emailsSent });
       } else {
         setNotifyResult({
           zipCode: data.zipBreakdown?.map(z => z.zipCode).join(", ") ?? "",
           emails: data.emails,
           count: data.count,
+          emailsSent: data.emailsSent,
         });
       }
       setNotifyResultModalOpen(true);
@@ -1156,7 +1191,7 @@ export default function WaitlistPage() {
               This will mark {selectedZipCustomerCount} waiting customer{selectedZipCustomerCount === 1 ? "" : "s"} across {selectedZips.size} ZIP code{selectedZips.size === 1 ? "" : "s"} as notified. This action cannot be undone.
             </Banner>
             <Text as="p">
-              After confirming, you&apos;ll receive all customer email addresses to contact them through your preferred email service.
+              After confirming, notification emails will be sent automatically to all waiting customers in the selected ZIP codes.
             </Text>
             <BlockStack gap="200">
               <Text as="h3" variant="headingSm">Selected ZIP Codes:</Text>
@@ -1217,15 +1252,30 @@ export default function WaitlistPage() {
           <BlockStack gap="400">
             {notifyResult && notifyResult.count > 0 ? (
               <>
-                <Banner tone="success">
-                  Updated {notifyResult.count} customer
-                  {notifyResult.count === 1 ? "" : "s"} to &quot;Notified&quot;
-                  status for ZIP code {notifyResult.zipCode}.
-                </Banner>
+                {notifyResult.emailsSent != null && notifyResult.emailsSent > 0 ? (
+                  <Banner tone="success">
+                    Emails sent to {notifyResult.emailsSent} of{" "}
+                    {notifyResult.count} customer
+                    {notifyResult.count === 1 ? "" : "s"} for ZIP code{" "}
+                    {notifyResult.zipCode}.
+                  </Banner>
+                ) : notifyResult.emailsSent === 0 ? (
+                  <Banner tone="warning">
+                    Updated {notifyResult.count} customer
+                    {notifyResult.count === 1 ? "" : "s"} to &quot;Notified&quot;
+                    status, but emails could not be sent. You can copy the
+                    addresses below and contact them manually.
+                  </Banner>
+                ) : (
+                  <Banner tone="success">
+                    Updated {notifyResult.count} customer
+                    {notifyResult.count === 1 ? "" : "s"} to &quot;Notified&quot;
+                    status for ZIP code {notifyResult.zipCode}.
+                  </Banner>
+                )}
                 <Text as="p">
-                  Copy these email addresses and paste them into your preferred
-                  email client, or click &quot;Open in Email Client&quot; to
-                  launch a pre-filled email.
+                  You can also copy these email addresses or click &quot;Open in
+                  Email Client&quot; as a backup.
                 </Text>
                 <TextField
                   label="Customer Emails"
