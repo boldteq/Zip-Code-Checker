@@ -31,7 +31,7 @@ import {
 import { PlusIcon, DeleteIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 
 const PAGE_SIZE = 10;
-const ADMIN_SHOP = "zipcodechecker.myshopify.com";
+const ADMIN_SHOP = "zip-code-checker.myshopify.com";
 const MAX_REQUESTS_PER_SHOP = 20;
 const MAX_DESCRIPTION_LENGTH = 2000;
 
