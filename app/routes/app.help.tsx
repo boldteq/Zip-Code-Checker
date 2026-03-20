@@ -21,7 +21,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ChatIcon,
-  EmailIcon,
+  EmailNewsletterIcon,
   LightbulbIcon,
   ClockIcon,
 } from "@shopify/polaris-icons";
@@ -181,7 +181,7 @@ export default function HelpPage() {
                   <Card>
                     <BlockStack gap="300" inlineAlign="center">
                       <Box
-                        background="bg-fill-info"
+                        background="bg-surface-info"
                         borderRadius="full"
                         padding="300"
                       >
@@ -222,11 +222,11 @@ export default function HelpPage() {
                   <Card>
                     <BlockStack gap="300" inlineAlign="center">
                       <Box
-                        background="bg-fill-success"
+                        background="bg-surface-success"
                         borderRadius="full"
                         padding="300"
                       >
-                        <Icon source={EmailIcon} tone="success" />
+                        <Icon source={EmailNewsletterIcon} tone="success" />
                       </Box>
                       <Text as="h3" variant="headingSm" alignment="center">
                         Email Us
@@ -256,7 +256,7 @@ export default function HelpPage() {
                   <Card>
                     <BlockStack gap="300" inlineAlign="center">
                       <Box
-                        background="bg-fill-warning"
+                        background="bg-surface-warning"
                         borderRadius="full"
                         padding="300"
                       >
