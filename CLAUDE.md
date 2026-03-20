@@ -1,4 +1,4 @@
-# Zip Code Checker — Shopify App Project Brain
+# Pinzo — Shopify App Project Brain
 
 ## Stack (Exact Versions)
 - **Framework:** React Router 7 (`@shopify/shopify-app-react-router` v1) — NOT Remix

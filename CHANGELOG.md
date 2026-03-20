@@ -1,4 +1,4 @@
-# Zip Code Checker — Changelog
+# Pinzo — Changelog
 
 ## Unreleased
 

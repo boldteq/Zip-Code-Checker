@@ -1,4 +1,4 @@
-Handle this database task for the Zip Code Checker Shopify app: $ARGUMENTS
+Handle this database task for the Pinzo Shopify app: $ARGUMENTS
 
 ## Database Context
 

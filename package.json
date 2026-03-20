@@ -1,5 +1,5 @@
 {
-  "name": "zip-code-checker",
+  "name": "pinzo",
   "private": true,
   "scripts": {
     "build": "react-router build",
@@ -68,5 +68,5 @@
   "overrides": {
     "p-map": "^4.0.0"
   },
-  "author": "Zip Code Checker"
+  "author": "Pinzo"
 }

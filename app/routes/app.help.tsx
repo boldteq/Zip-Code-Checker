@@ -51,7 +51,7 @@ export default function HelpPage() {
     {
       question: "How do I add the widget to my store?",
       answer:
-        "Go to Online Store → Themes → Customize. Enable 'Zip Code Checker' under App Embeds, then add the block to any page from the Apps section.",
+        "Go to Online Store → Themes → Customize. Enable 'Pinzo' under App Embeds, then add the block to any page from the Apps section.",
     },
     {
       question: "How many ZIP codes can I add?",

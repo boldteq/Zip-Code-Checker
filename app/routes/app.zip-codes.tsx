@@ -867,7 +867,7 @@ export default function ZipCodeCheckerPage() {
 
   return (
     <Page
-      title="Zip Code Checker"
+      title="Pinzo"
       subtitle="Manage allowed and blocked zip codes for your store"
       primaryAction={
         atZipLimit
@@ -1046,7 +1046,7 @@ export default function ZipCodeCheckerPage() {
           </InlineGrid>
         </Layout.Section>
 
-        {/* Zip Code Checker Tool */}
+        {/* Pinzo Tool */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">

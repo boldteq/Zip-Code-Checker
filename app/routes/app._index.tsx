@@ -254,11 +254,11 @@ export default function DashboardPage() {
               <List type="number">
                 <List.Item>
                   Open <strong>Theme Editor &gt; App Embeds</strong> and turn on{" "}
-                  <strong>Zip Code Checker</strong>
+                  <strong>Pinzo</strong>
                 </List.Item>
                 <List.Item>
                   Go to your <strong>Product template</strong>, add the{" "}
-                  <strong>Zip Code Checker</strong> block, and save
+                  <strong>Pinzo</strong> block, and save
                 </List.Item>
               </List>
             </Banner>

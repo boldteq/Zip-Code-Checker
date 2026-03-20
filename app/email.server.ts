@@ -158,7 +158,7 @@ export async function sendTestEmail(to: string): Promise<boolean> {
     await pm.sendEmail({
       From: getFromEmail(),
       To: to,
-      Subject: "Zip Code Checker — Test Email",
+      Subject: "Pinzo — Test Email",
       HtmlBody: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
           <h2 style="margin:0 0 16px">Test email received!</h2>

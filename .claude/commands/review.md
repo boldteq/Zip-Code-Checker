@@ -1,4 +1,4 @@
-Review the most recent changes in the Zip Code Checker Shopify app.
+Review the most recent changes in the Pinzo Shopify app.
 
 ## Review Strategy
 

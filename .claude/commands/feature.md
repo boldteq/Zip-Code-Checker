@@ -1,4 +1,4 @@
-Build a complete feature for the Zip Code Checker Shopify app: $ARGUMENTS
+Build a complete feature for the Pinzo Shopify app: $ARGUMENTS
 
 ## Agent Orchestration
 

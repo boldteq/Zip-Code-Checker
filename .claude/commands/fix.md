@@ -1,4 +1,4 @@
-Fix this issue in the Zip Code Checker Shopify app: $ARGUMENTS
+Fix this issue in the Pinzo Shopify app: $ARGUMENTS
 
 ## Smart Routing
 

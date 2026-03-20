@@ -1198,7 +1198,7 @@ export default function WidgetPage() {
   return (
     <Page
       title="Widget Customization"
-      subtitle="Customize how the zip code checker looks on your storefront"
+      subtitle="Customize how Pinzo looks on your storefront"
       backAction={{ onAction: () => navigate("/app") }}
       primaryAction={isDirty ? {
         content: "Save Changes",

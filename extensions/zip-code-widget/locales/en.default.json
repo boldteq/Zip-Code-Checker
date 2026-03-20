@@ -1,11 +1,11 @@
 {
   "blocks": {
     "zip_code_checker": {
-      "name": "Zip Code Checker"
+      "name": "Pinzo"
     },
     "cart_validator": {
-      "name": "Zip Code Checker — Cart Validator",
-      "title": "Zip Code Checker — Cart Validator",
+      "name": "Pinzo — Cart Validator",
+      "title": "Pinzo — Cart Validator",
       "warning_title": "Delivery Not Available",
       "dismiss": "Dismiss"
     }

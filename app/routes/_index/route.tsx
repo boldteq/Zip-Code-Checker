@@ -139,7 +139,7 @@ export default function App() {
                 <Icon source={LocationIcon} tone="success" />
               </div>
               <Text as="span" variant="headingMd" fontWeight="bold">
-                Zip Code Checker
+                Pinzo
               </Text>
             </InlineStack>
           </Box>
@@ -281,7 +281,7 @@ export default function App() {
             paddingInlineEnd="600"
           >
             <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-              Built for Shopify merchants — Zip Code Checker
+              Built for Shopify merchants — Pinzo
             </Text>
           </Box>
         </footer>
