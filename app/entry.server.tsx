@@ -15,6 +15,35 @@ export default async function handleRequest(
   reactRouterContext: EntryContext
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
+
+  // Allow Chatwoot live-chat widget inside the Shopify admin iframe
+  const csp = responseHeaders.get("Content-Security-Policy");
+  if (csp) {
+    const chatwootDomain = "https://app.chatwoot.com";
+    let updatedCsp = csp;
+    updatedCsp = updatedCsp.replace(
+      /script-src\s/,
+      `script-src ${chatwootDomain} `,
+    );
+    updatedCsp = updatedCsp.replace(
+      /connect-src\s/,
+      `connect-src ${chatwootDomain} wss://app.chatwoot.com `,
+    );
+    updatedCsp = updatedCsp.replace(
+      /frame-src\s/,
+      `frame-src ${chatwootDomain} `,
+    );
+    updatedCsp = updatedCsp.replace(
+      /img-src\s/,
+      `img-src ${chatwootDomain} `,
+    );
+    updatedCsp = updatedCsp.replace(
+      /style-src\s/,
+      `style-src ${chatwootDomain} `,
+    );
+    responseHeaders.set("Content-Security-Policy", updatedCsp);
+  }
+
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')
     ? "onAllReady"
