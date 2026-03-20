@@ -28,7 +28,7 @@ import {
   InlineGrid,
   Banner,
 } from "@shopify/polaris";
-import { PlusIcon, DeleteIcon, ChevronUpIcon } from "@shopify/polaris-icons";
+import { PlusIcon, DeleteIcon, ChevronUpIcon, EditIcon } from "@shopify/polaris-icons";
 
 const PAGE_SIZE = 10;
 const ADMIN_SHOP = "zip-code-checker.myshopify.com";
@@ -61,6 +61,7 @@ type VoteResult = {
 type SubmitResult = { success: true; intent: "submit" };
 type DeleteResult = { success: true; intent: "delete" };
 type StatusResult = { success: true; intent: "update-status" };
+type EditResult = { success: true; intent: "edit" };
 type ErrorResult = { error: string };
 
 type ActionResult =
@@ -68,6 +69,7 @@ type ActionResult =
   | SubmitResult
   | DeleteResult
   | StatusResult
+  | EditResult
   | ErrorResult;
 
 // ---------------------------------------------------------------------------
@@ -306,6 +308,39 @@ export const action = async ({
         return { success: true, intent: "delete" };
       }
 
+      case "edit": {
+        const editId = String(formData.get("id") ?? "").trim();
+        const editTitle = String(formData.get("title") ?? "").trim();
+        const editDescription = String(formData.get("description") ?? "").trim();
+        const rawEditCategory = String(formData.get("category") ?? "General").trim();
+        const editCategory = VALID_CATEGORIES.has(rawEditCategory) ? rawEditCategory : "General";
+
+        if (!editId) return { error: "Feature ID is required." };
+        if (!editTitle || !editDescription) {
+          return { error: "Title and description are required." };
+        }
+        if (editTitle.length > 150) {
+          return { error: "Title must be 150 characters or fewer." };
+        }
+        if (editDescription.length > MAX_DESCRIPTION_LENGTH) {
+          return { error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer.` };
+        }
+
+        const toEdit = await db.featureRequest.findUnique({ where: { id: editId } });
+        if (!toEdit) return { error: "Feature request not found." };
+
+        if (!isAdmin && toEdit.shop !== shop) {
+          return { error: "You can only edit your own feature requests." };
+        }
+
+        await db.featureRequest.update({
+          where: { id: editId },
+          data: { title: editTitle, description: editDescription, category: editCategory },
+        });
+
+        return { success: true, intent: "edit" };
+      }
+
       case "update-status": {
         if (!isAdmin) {
           return { error: "Only the app admin can change request statuses." };
@@ -360,6 +395,7 @@ export default function FeatureRequestsPage() {
   const deleteFetcher = useFetcher<typeof action>();
   const submitFetcher = useFetcher<typeof action>();
   const statusFetcher = useFetcher<typeof action>();
+  const editFetcher = useFetcher<typeof action>();
 
   const shopify = useAppBridge();
   const navigate = useNavigate();
@@ -392,6 +428,14 @@ export default function FeatureRequestsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newCategory, setNewCategory] = useState("General");
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editId, setEditId] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState("General");
+  const [editModalError, setEditModalError] = useState<string | null>(null);
 
   // ------------------------------------------------------------------
   // Resolve optimistic state into features list
@@ -475,6 +519,10 @@ export default function FeatureRequestsPage() {
       setNewDescription("");
       setNewCategory("General");
       setModalError(null);
+      // Bring the new request into view: switch to All tab, sort by Newest, page 1
+      setSelectedTab(0);
+      setSortValue("newest");
+      setCurrentPage(1);
     }
   }, [submitFetcher.state, submitFetcher.data, shopify]);
 
@@ -494,6 +542,29 @@ export default function FeatureRequestsPage() {
       shopify.toast.show("Status updated.");
     }
   }, [statusFetcher.state, statusFetcher.data, shopify]);
+
+  // ------------------------------------------------------------------
+  // Handle edit fetcher responses
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    if (editFetcher.state !== "idle" || !editFetcher.data) return;
+    const data = editFetcher.data;
+
+    if ("error" in data) {
+      setEditModalError(data.error);
+      return;
+    }
+
+    if ("success" in data && data.success && data.intent === "edit") {
+      shopify.toast.show("Feature request updated.");
+      setEditModalOpen(false);
+      setEditId("");
+      setEditTitle("");
+      setEditDescription("");
+      setEditCategory("General");
+      setEditModalError(null);
+    }
+  }, [editFetcher.state, editFetcher.data, shopify]);
 
   // ------------------------------------------------------------------
   // Filter + sort
@@ -645,6 +716,44 @@ export default function FeatureRequestsPage() {
     setModalError(null);
   }, []);
 
+  const handleOpenEdit = useCallback((feature: FeatureRequestRecord) => {
+    setEditId(feature.id);
+    setEditTitle(feature.title);
+    setEditDescription(feature.description);
+    setEditCategory(feature.category);
+    setEditModalError(null);
+    setEditModalOpen(true);
+  }, []);
+
+  const handleEditSubmit = useCallback(() => {
+    if (!editTitle.trim() || !editDescription.trim()) {
+      setEditModalError("Title and description are required.");
+      return;
+    }
+    if (editDescription.trim().length > MAX_DESCRIPTION_LENGTH) {
+      setEditModalError(`Description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer.`);
+      return;
+    }
+    setEditModalError(null);
+
+    const fd = new FormData();
+    fd.set("intent", "edit");
+    fd.set("id", editId);
+    fd.set("title", editTitle.trim());
+    fd.set("description", editDescription.trim());
+    fd.set("category", editCategory);
+    editFetcher.submit(fd, { method: "POST" });
+  }, [editId, editTitle, editDescription, editCategory, editFetcher]);
+
+  const handleCloseEditModal = useCallback(() => {
+    setEditModalOpen(false);
+    setEditId("");
+    setEditTitle("");
+    setEditDescription("");
+    setEditCategory("General");
+    setEditModalError(null);
+  }, []);
+
   // ------------------------------------------------------------------
   // Tabs config
   // ------------------------------------------------------------------
@@ -734,9 +843,9 @@ export default function FeatureRequestsPage() {
               </Box>
               <Box
                 padding="400"
-                background="bg-surface"
+                background="bg-surface-magic"
                 borderWidth="025"
-                borderColor="border"
+                borderColor="border-magic"
                 borderRadius="200"
               >
                 <BlockStack gap="100">
@@ -785,16 +894,20 @@ export default function FeatureRequestsPage() {
 
               {/* Sort bar */}
               <Box padding="400">
-                <InlineStack align="end">
-                  <Box minWidth="180px">
-                    <Select
-                      label="Sort by"
-                      labelInline
-                      options={SORT_OPTIONS}
-                      value={sortValue}
-                      onChange={handleSortChange}
-                    />
-                  </Box>
+                <InlineStack align="end" gap="300" blockAlign="center">
+                  <Text as="span" variant="bodySm" tone="subdued">Sort by</Text>
+                  <InlineStack gap="200">
+                    {SORT_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={sortValue === opt.value ? "primary" : "secondary"}
+                        size="slim"
+                        onClick={() => handleSortChange(opt.value)}
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </InlineStack>
                 </InlineStack>
               </Box>
               <Divider />
@@ -821,6 +934,7 @@ export default function FeatureRequestsPage() {
                     const isVoted = votedIds.has(feature.id);
                     const isOwner = feature.shop === shop;
                     const canDelete = isOwner || isAdmin;
+                    const canEdit = isOwner || isAdmin;
                     const isExpanded = expandedIds.has(feature.id);
                     const needsTruncation = feature.description.length > 160;
                     const displayDescription = isExpanded
@@ -838,7 +952,7 @@ export default function FeatureRequestsPage() {
                             wrap={false}
                           >
                             {/* Vote button */}
-                            <Box minWidth="56px">
+                            <Box minWidth="60px">
                               <BlockStack gap="050" inlineAlign="center">
                                 <Button
                                   variant={isVoted ? "primary" : "secondary"}
@@ -863,6 +977,14 @@ export default function FeatureRequestsPage() {
                                   tone={isVoted ? "success" : undefined}
                                 >
                                   {feature.votesCount}
+                                </Text>
+                                <Text
+                                  as="p"
+                                  variant="bodySm"
+                                  alignment="center"
+                                  tone={isVoted ? "success" : "subdued"}
+                                >
+                                  {isVoted ? "voted" : "vote"}
                                 </Text>
                               </BlockStack>
                             </Box>
@@ -908,7 +1030,6 @@ export default function FeatureRequestsPage() {
                                           feature.status}
                                       </Badge>
                                     )}
-                                    <Badge>{feature.category}</Badge>
                                   </InlineStack>
                                 </InlineStack>
 
@@ -944,6 +1065,18 @@ export default function FeatureRequestsPage() {
                                   >
                                     Submitted {formatDate(feature.createdAt)}
                                   </Text>
+                                  <Badge>{feature.category}</Badge>
+                                  {canEdit && (
+                                    <Button
+                                      variant="plain"
+                                      size="slim"
+                                      icon={EditIcon}
+                                      onClick={() => handleOpenEdit(feature)}
+                                      accessibilityLabel="Edit feature request"
+                                    >
+                                      Edit
+                                    </Button>
+                                  )}
                                   {canDelete && (
                                     <Button
                                       variant="plain"
@@ -1054,6 +1187,57 @@ export default function FeatureRequestsPage() {
               options={CATEGORY_OPTIONS}
               value={newCategory}
               onChange={setNewCategory}
+              helpText="Choose the category that best fits your request."
+            />
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
+
+      {/* ---- Edit Feature Request Modal ---- */}
+      <Modal
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        title="Edit Feature Request"
+        primaryAction={{
+          content: "Save Changes",
+          onAction: handleEditSubmit,
+          loading: editFetcher.state !== "idle",
+        }}
+        secondaryActions={[{ content: "Cancel", onAction: handleCloseEditModal }]}
+      >
+        <Modal.Section>
+          <BlockStack gap="400">
+            {editModalError && (
+              <Banner tone="critical" onDismiss={() => setEditModalError(null)}>
+                {editModalError}
+              </Banner>
+            )}
+            <TextField
+              label="Title"
+              value={editTitle}
+              onChange={setEditTitle}
+              placeholder="e.g. Export ZIP codes to CSV"
+              autoComplete="off"
+              maxLength={150}
+              showCharacterCount
+              helpText="Keep it short and descriptive."
+            />
+            <TextField
+              label="Description"
+              value={editDescription}
+              onChange={setEditDescription}
+              placeholder="Describe the feature and why it would be valuable..."
+              autoComplete="off"
+              multiline={4}
+              maxLength={MAX_DESCRIPTION_LENGTH}
+              showCharacterCount
+              helpText="The more context you provide, the better we can understand your needs."
+            />
+            <Select
+              label="Category"
+              options={CATEGORY_OPTIONS}
+              value={editCategory}
+              onChange={setEditCategory}
               helpText="Choose the category that best fits your request."
             />
           </BlockStack>
