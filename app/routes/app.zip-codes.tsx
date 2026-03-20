@@ -485,7 +485,7 @@ type ZipCodeRecord = {
   createdAt: string | Date;
 };
 
-export default function ZipCodeCheckerPage() {
+export default function ZipCodesPage() {
   const { zipCodes, stats, subscription } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();

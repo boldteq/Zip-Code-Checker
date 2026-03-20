@@ -127,7 +127,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           if (
             (apiKey && (keyStr.includes(apiKey) || typeStr.includes(apiKey))) ||
             keyStr.includes("zip-code") || typeStr.includes("zip-code") ||
-            keyStr.includes("zip_code") || typeStr.includes("zip_code")
+            keyStr.includes("zip_code") || typeStr.includes("zip_code") ||
+            keyStr.includes("pinzo") || typeStr.includes("pinzo")
           ) {
             appEmbedEnabled = true;
             break;
@@ -141,7 +142,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           const hasOurApp =
             (apiKey && contentLower.includes(apiKey.toLowerCase())) ||
             contentLower.includes("zip-code-checker") ||
-            contentLower.includes("zip-code-widget");
+            contentLower.includes("zip-code-widget") ||
+            contentLower.includes("pinzo");
           if (hasEmbed && hasOurApp) {
             // Check not disabled
             const notDisabled = !contentLower.includes('"disabled":true');

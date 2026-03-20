@@ -1,5 +1,5 @@
 {% comment %}
-  Zip Code Checker — Theme App Extension Block
+  Pinzo — Theme App Extension Block
   Add this block to any section in the Shopify Theme Editor.
   The block automatically connects to your app — no manual configuration needed.
 {% endcomment %}
@@ -19,9 +19,9 @@
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
       color:#6d7175;font-size:13px;box-sizing:border-box;
     ">
-      <p style="margin:0 0 6px;font-weight:600;color:#202223;font-size:15px;">Zip Code Checker</p>
+      <p style="margin:0 0 6px;font-weight:600;color:#202223;font-size:15px;">Pinzo</p>
       <p style="margin:0 0 4px;">This widget requires the app embed to be enabled.</p>
-      <p style="margin:0;font-size:12px;">Go to <strong>App Embeds</strong> and toggle on <strong>Zip Code Checker</strong> to activate.</p>
+      <p style="margin:0;font-size:12px;">Go to <strong>App Embeds</strong> and toggle on <strong>Pinzo</strong> to activate.</p>
     </div>
     <!-- Active preview (hidden by default) -->
     <div id="zcc-active-{{ block.id }}" style="display:none;">
@@ -69,7 +69,7 @@
           </div>
         </div>
         <p style="margin:14px 0 0;font-size:11px;color:#8c9196;text-align:center;">
-          Zip Code Checker — live widget loads on your storefront
+          Pinzo — live widget loads on your storefront
         </p>
       </div>
     </div>
@@ -157,7 +157,7 @@
     })
     .then(function (cfg) { renderWidget(cfg); })
     .catch(function (err) {
-      console.warn("[ZipCodeChecker] Could not load widget config, using defaults:", err.message || err);
+      console.warn("[Pinzo] Could not load widget config, using defaults:", err.message || err);
       renderWidget({});
     });
 
@@ -531,7 +531,7 @@
           // transient server error and show it in the result area rather than
           // falling through with undefined message text.
           if (data.error && data.allowed === undefined) {
-            console.error('[ZipCodeChecker] API returned error:', data.error, '| API_BASE="' + API_BASE + '" SHOP="' + SHOP + '"');
+            console.error('[Pinzo] API returned error:', data.error, '| API_BASE="' + API_BASE + '" SHOP="' + SHOP + '"');
             res.innerHTML = '<div class="zcc-result fail"><div class="zcc-result-icon">' + ICONS.xCircle + '</div><div class="zcc-result-content"><div class="zcc-result-message">Something went wrong. Please try again.</div></div></div>';
             try {
               sessionStorage.removeItem('zcc:valid');
@@ -688,7 +688,7 @@
           setBtnLoading(false);
           // Log to console so merchants/developers can diagnose API connectivity issues.
           // The URL is logged so we can immediately see if the proxy/API base is wrong.
-          console.error('[ZipCodeChecker] ZIP check failed. API_BASE="' + API_BASE + '" SHOP="' + SHOP + '"', err);
+          console.error('[Pinzo] ZIP check failed. API_BASE="' + API_BASE + '" SHOP="' + SHOP + '"', err);
           res.innerHTML = '<div class="zcc-result fail"><div class="zcc-result-icon">' + ICONS.xCircle + '</div><div class="zcc-result-content"><div class="zcc-result-message">Something went wrong. Please try again.</div></div></div>';
           try {
             sessionStorage.removeItem('zcc:valid');
@@ -965,7 +965,7 @@
 
 {% schema %}
 {
-  "name": "Zip Code Checker",
+  "name": "Pinzo",
   "target": "section",
   "settings": []
 }
