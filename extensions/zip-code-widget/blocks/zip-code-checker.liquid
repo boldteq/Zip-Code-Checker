@@ -93,8 +93,6 @@
   </script>
 {% else %}
 
-{% assign zcc_config = app.metafields.zip_checker.widget_config.value %}
-
 <div
   id="zcc-widget-{{ block.id }}"
   data-zcc-widget="true"
@@ -102,7 +100,6 @@
   data-api="{{ app.url }}"
   data-proxy="/apps/zipcheck"
   data-block="{{ block.id }}"
-  {% if zcc_config %}data-config="{{ zcc_config | json | escape }}"{% endif %}
   {{ block.shopify_attributes }}
 ></div>
 
@@ -147,18 +144,12 @@
   // (which Shopify will forward to our app via the App Proxy config).
   var API_BASE = (_rawApi && _rawApi.indexOf("http") === 0) ? _rawApi : _proxyPath;
 
-  // Try embedded config from metafield first (instant, no network needed)
-  var configStr = container.getAttribute("data-config");
-  if (configStr) {
-    try {
-      renderWidget(JSON.parse(configStr));
-      return;
-    } catch (e) {
-      console.warn("[ZipCodeChecker] Failed to parse embedded config, falling back to API");
-    }
-  }
-
-  // Fallback: fetch config from API
+  // Always fetch fresh config from the API so color/setting changes made in the
+  // admin are reflected on the storefront immediately. The metafield-embedded
+  // data-config attribute is intentionally ignored here: it is baked into
+  // Shopify's CDN-cached HTML at render time and can be stale for many minutes
+  // after a merchant saves new settings. The API endpoint returns
+  // Cache-Control: no-store so it is always up to date.
   fetch(API_BASE + "/api/widget-config?shop=" + encodeURIComponent(SHOP))
     .then(function (r) {
       if (!r.ok) throw new Error("Widget config API returned " + r.status);
@@ -342,10 +333,17 @@
     return (
       // Spin animation for loading spinner
       "@keyframes zcc-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}" +
+      // CSS-only ring spinner shown inside the button during loading
+      W + " .zcc-spinner{display:block !important;width:18px !important;height:18px !important;border-radius:50% !important;" +
+        "border:2.5px solid rgba(255,255,255,0.3) !important;border-top-color:#fff !important;" +
+        "animation:zcc-spin 0.7s linear infinite !important;flex-shrink:0 !important}" +
       // Button icon/label structure
       W + " .zcc-btn-icon{display:inline-flex !important;align-items:center !important;flex-shrink:0 !important}" +
       W + " .zcc-btn-icon svg{width:15px !important;height:15px !important;display:block !important}" +
       W + " .zcc-btn-label{display:inline !important}" +
+      // Loading state: center the spinner, hide gap
+      W + " .zcc-btn--loading{gap:0 !important;justify-content:center !important}" +
+      W + " .zcc-btn--loading .zcc-btn-icon{display:flex !important;align-items:center !important;justify-content:center !important}" +
       // Result card layout
       W + " .zcc-result-icon{flex-shrink:0 !important;width:24px !important;height:24px !important;display:flex !important;align-items:center !important;justify-content:center !important}" +
       W + " .zcc-result-icon svg{width:22px !important;height:22px !important;display:block !important}" +
@@ -447,7 +445,7 @@
     refresh:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
     mail:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
     users:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    spinner:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:zcc-spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg>',
+    spinner:  '<span class="zcc-spinner" aria-hidden="true"></span>',
     checkmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
   };
 
@@ -495,11 +493,13 @@
       var labelEl = btn.querySelector('.zcc-btn-label');
       btn.disabled = loading;
       if (loading) {
+        btn.classList.add('zcc-btn--loading');
         if (iconEl) iconEl.innerHTML = ICONS.spinner;
-        if (labelEl) labelEl.textContent = '\u2026';
+        if (labelEl) labelEl.style.display = 'none';
       } else {
+        btn.classList.remove('zcc-btn--loading');
         if (iconEl) iconEl.innerHTML = ICONS.search;
-        if (labelEl) labelEl.textContent = cfg.buttonText;
+        if (labelEl) { labelEl.style.display = ''; labelEl.textContent = cfg.buttonText; }
       }
     }
 
