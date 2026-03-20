@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Outlet, useLoaderData, useNavigation, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -56,12 +57,40 @@ function AppContent() {
   return <Outlet />;
 }
 
+function ChatwootWidget() {
+  useEffect(() => {
+    // Skip if already loaded
+    if ((window as any).$chatwoot) return;
+
+    (window as any).chatwootSettings = {
+      position: "right",
+      type: "standard",
+      launcherTitle: "",
+    };
+
+    const BASE_URL = "https://app.chatwoot.com";
+    const script = document.createElement("script");
+    script.src = `${BASE_URL}/packs/js/sdk.js`;
+    script.async = true;
+    script.onload = () => {
+      (window as any).chatwootSDK.run({
+        websiteToken: "F2gCECkLD25SAkJ92AcVui4x",
+        baseUrl: BASE_URL,
+      });
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
 
   return (
     <AppProvider embedded apiKey={apiKey}>
       <PolarisAppProvider i18n={enTranslations}>
+        <ChatwootWidget />
         <s-app-nav>
           <s-link href="/app/zip-codes">Zip Codes</s-link>
           <s-link href="/app/delivery-rules">Delivery Rules</s-link>
