@@ -929,8 +929,8 @@ export default function FeatureRequestsPage() {
                   </Text>
                 </EmptyState>
               ) : (
-                <BlockStack gap="0">
-                  {paginatedFeatures.map((feature, index) => {
+                <BlockStack gap="300">
+                  {paginatedFeatures.map((feature) => {
                     const isVoted = votedIds.has(feature.id);
                     const isOwner = feature.shop === shop;
                     const canDelete = isOwner || isAdmin;
@@ -942,20 +942,48 @@ export default function FeatureRequestsPage() {
                       : truncateText(feature.description, 160);
 
                     return (
-                      <Box key={feature.id}>
-                        {index > 0 && <Divider />}
-                        <Box padding="400">
-                          <InlineStack
-                            gap="400"
-                            align="start"
-                            blockAlign="start"
-                            wrap={false}
-                          >
-                            {/* Vote button */}
-                            <Box minWidth="60px">
-                              <BlockStack gap="050" inlineAlign="center">
+                      <Box
+                        key={feature.id}
+                        padding="400"
+                        background={
+                          feature.status === "planned"
+                            ? "bg-surface-info"
+                            : feature.status === "in_progress"
+                              ? "bg-surface-magic"
+                              : feature.status === "done" || feature.status === "shipped"
+                                ? "bg-surface-success"
+                                : "bg-surface-warning"
+                        }
+                        borderWidth="025"
+                        borderColor={
+                          feature.status === "planned"
+                            ? "border-info"
+                            : feature.status === "in_progress"
+                              ? "border-magic"
+                              : feature.status === "done" || feature.status === "shipped"
+                                ? "border-success"
+                                : "border-warning"
+                        }
+                        borderRadius="300"
+                      >
+                        <InlineStack
+                          gap="400"
+                          align="start"
+                          blockAlign="start"
+                          wrap={false}
+                        >
+                          {/* Vote button */}
+                          <Box minWidth="64px">
+                            <Box
+                              padding="200"
+                              background={isVoted ? "bg-surface-success" : "bg-surface-secondary"}
+                              borderRadius="200"
+                              borderWidth="025"
+                              borderColor={isVoted ? "border-success" : "border"}
+                            >
+                              <BlockStack gap="100" inlineAlign="center">
                                 <Button
-                                  variant={isVoted ? "primary" : "secondary"}
+                                  variant={isVoted ? "primary" : "tertiary"}
                                   size="slim"
                                   icon={ChevronUpIcon}
                                   onClick={() => handleVote(feature.id)}
@@ -988,84 +1016,63 @@ export default function FeatureRequestsPage() {
                                 </Text>
                               </BlockStack>
                             </Box>
+                          </Box>
 
-                            {/* Content */}
-                            <Box width="100%">
-                              <BlockStack gap="200">
-                                <InlineStack
-                                  align="space-between"
-                                  blockAlign="start"
-                                  wrap
+                          {/* Content */}
+                          <Box width="100%">
+                            <BlockStack gap="200">
+                              <InlineStack
+                                align="space-between"
+                                blockAlign="start"
+                                wrap
+                              >
+                                <Text
+                                  as="p"
+                                  variant="bodyMd"
+                                  fontWeight="semibold"
                                 >
-                                  <Text
-                                    as="p"
-                                    variant="bodyMd"
-                                    fontWeight="semibold"
-                                  >
-                                    {feature.title}
-                                  </Text>
-                                  <InlineStack
-                                    gap="200"
-                                    blockAlign="center"
-                                    wrap
-                                  >
-                                    {/* Admin: status dropdown; Regular: static badge */}
-                                    {isAdmin ? (
-                                      <Box minWidth="140px">
-                                        <Select
-                                          label="Status"
-                                          labelHidden
-                                          options={STATUS_OPTIONS}
-                                          value={feature.status}
-                                          onChange={(val) =>
-                                            handleStatusChange(feature.id, val)
-                                          }
-                                        />
-                                      </Box>
-                                    ) : (
-                                      <Badge
-                                        tone={STATUS_TONES[feature.status]}
-                                      >
-                                        {STATUS_LABELS[feature.status] ??
-                                          feature.status}
-                                      </Badge>
-                                    )}
-                                  </InlineStack>
-                                </InlineStack>
-
-                                <Text as="p" tone="subdued" variant="bodySm">
-                                  {displayDescription}
-                                  {needsTruncation && (
-                                    <>
-                                      {" "}
-                                      <Button
-                                        variant="plain"
-                                        size="slim"
-                                        onClick={() =>
-                                          handleToggleExpand(feature.id)
-                                        }
-                                      >
-                                        {isExpanded
-                                          ? "Show less"
-                                          : "View details"}
-                                      </Button>
-                                    </>
-                                  )}
+                                  {feature.title}
                                 </Text>
+                                {isAdmin ? (
+                                  <Box minWidth="140px">
+                                    <Select
+                                      label="Status"
+                                      labelHidden
+                                      options={STATUS_OPTIONS}
+                                      value={feature.status}
+                                      onChange={(val) =>
+                                        handleStatusChange(feature.id, val)
+                                      }
+                                    />
+                                  </Box>
+                                ) : (
+                                  <Badge
+                                    tone={STATUS_TONES[feature.status]}
+                                  >
+                                    {STATUS_LABELS[feature.status] ??
+                                      feature.status}
+                                  </Badge>
+                                )}
+                              </InlineStack>
 
-                                <InlineStack
-                                  gap="400"
-                                  blockAlign="center"
-                                  wrap
-                                >
+                              <Text as="p" tone="subdued" variant="bodySm">
+                                {displayDescription}
+                              </Text>
+
+                              <InlineStack
+                                align="space-between"
+                                blockAlign="center"
+                                wrap
+                              >
+                                <InlineStack gap="300" blockAlign="center" wrap>
+                                  <Badge>{feature.category}</Badge>
                                   <Text
                                     as="p"
                                     tone="subdued"
                                     variant="bodySm"
                                   >
-                                    Submitted {formatDate(feature.createdAt)}
+                                    {formatDate(feature.createdAt)}
                                   </Text>
-                                  <Badge>{feature.category}</Badge>
                                   {canEdit && (
                                     <Button
                                       variant="plain"
@@ -1096,10 +1103,23 @@ export default function FeatureRequestsPage() {
                                     </Button>
                                   )}
                                 </InlineStack>
-                              </BlockStack>
-                            </Box>
-                          </InlineStack>
-                        </Box>
+                                {needsTruncation && (
+                                  <Button
+                                    variant="plain"
+                                    size="slim"
+                                    onClick={() =>
+                                      handleToggleExpand(feature.id)
+                                    }
+                                  >
+                                    {isExpanded
+                                      ? "Show less"
+                                      : "View details \u2192"}
+                                  </Button>
+                                )}
+                              </InlineStack>
+                            </BlockStack>
+                          </Box>
+                        </InlineStack>
                       </Box>
                     );
                   })}
