@@ -333,17 +333,17 @@
     return (
       // Spin animation for loading spinner
       "@keyframes zcc-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}" +
-      // CSS-only ring spinner shown inside the button during loading
+      // CSS-only ring spinner — rendered as the sole button child during loading
       W + " .zcc-spinner{display:block !important;width:18px !important;height:18px !important;border-radius:50% !important;" +
-        "border:2.5px solid rgba(255,255,255,0.3) !important;border-top-color:#fff !important;" +
+        "border:2.5px solid rgba(255,255,255,0.35) !important;border-top-color:#fff !important;" +
         "animation:zcc-spin 0.7s linear infinite !important;flex-shrink:0 !important}" +
       // Button icon/label structure
       W + " .zcc-btn-icon{display:inline-flex !important;align-items:center !important;flex-shrink:0 !important}" +
       W + " .zcc-btn-icon svg{width:15px !important;height:15px !important;display:block !important}" +
       W + " .zcc-btn-label{display:inline !important}" +
-      // Loading state: center the spinner, hide gap
-      W + " .zcc-btn--loading{gap:0 !important;justify-content:center !important}" +
-      W + " .zcc-btn--loading .zcc-btn-icon{display:flex !important;align-items:center !important;justify-content:center !important}" +
+      // Loading state: button already has display:flex + justify-content:center from .zcc-btn,
+      // so the lone .zcc-spinner child is automatically centred — just remove the gap
+      W + " .zcc-btn--loading{gap:0 !important}" +
       // Result card layout
       W + " .zcc-result-icon{flex-shrink:0 !important;width:24px !important;height:24px !important;display:flex !important;align-items:center !important;justify-content:center !important}" +
       W + " .zcc-result-icon svg{width:22px !important;height:22px !important;display:block !important}" +
@@ -373,12 +373,12 @@
       W + " .zcc-wl-toggle svg{width:14px !important;height:14px !important;flex-shrink:0 !important}" +
       // Waitlist form inputs
       W + " .zcc-wl-input:focus{border-color:" + cfg.primaryColor + " !important;box-shadow:0 0 0 2px " + cfg.primaryColor + "20 !important}" +
-      // Waitlist submit button
-      W + " .zcc-wl-btn{display:flex !important;align-items:center !important;justify-content:center !important;gap:7px !important}" +
+      // Waitlist submit button icon sizing and disabled state
+      // Base styles, hover, active are defined in buildWidgetCss so they
+      // pick up btnRadius and primaryColor shadow — matching the Check button.
       W + " .zcc-wl-btn-icon{display:inline-flex !important;align-items:center !important;flex-shrink:0 !important}" +
       W + " .zcc-wl-btn-icon svg{width:14px !important;height:14px !important;display:block !important}" +
-      W + " .zcc-wl-btn:hover{filter:brightness(1.06) !important;transform:translateY(-1px) !important}" +
-      W + " .zcc-wl-btn:disabled{opacity:.6 !important;cursor:not-allowed !important}" +
+      W + " .zcc-wl-btn:disabled{opacity:.6 !important;cursor:not-allowed !important;filter:none !important;transform:none !important;box-shadow:none !important}" +
       // Waitlist success state
       W + " .zcc-wl-success{display:flex !important;align-items:flex-start !important;gap:8px !important;font-size:13px !important;color:" + cfg.successColor + " !important;font-weight:500 !important;padding:4px 0 !important}" +
       W + " .zcc-wl-success-icon{display:inline-flex !important;align-items:center !important;flex-shrink:0 !important;margin-top:1px !important}" +
@@ -418,7 +418,9 @@
       W + " .zcc-result.fail .zcc-result-icon svg{color:" + cfg.errorColor + " !important;stroke:" + cfg.errorColor + " !important}" +
       W + " .zcc-wl{margin-top:10px !important;padding:13px 14px !important;background:#f8fafc !important;border-radius:10px !important;border:1px solid #e2e8f0 !important}" +
       W + " .zcc-wl-input{border-radius:8px !important;border:1.5px solid #dee2e6 !important;padding:10px 14px !important;width:100% !important;display:block !important;margin-bottom:8px !important;outline:none !important;font-size:13px !important;transition:border-color 0.2s,box-shadow 0.2s !important;background:#fff !important;color:" + cfg.textColor + " !important}" +
-      W + " .zcc-wl-btn{border-radius:50px !important;background:" + cfg.primaryColor + " !important;color:#fff !important;padding:10px 16px !important;width:100% !important;font-weight:600 !important;border:none !important;cursor:pointer !important;font-size:13px !important;transition:filter 0.2s,transform 0.2s !important;letter-spacing:0.01em !important}" +
+      W + " .zcc-wl-btn{border-radius:" + btnRadius + " !important;background:" + cfg.primaryColor + " !important;color:#fff !important;padding:10px 20px !important;width:100% !important;font-weight:600 !important;border:none !important;cursor:pointer !important;font-size:13px !important;transition:filter 0.2s,box-shadow 0.2s,transform 0.2s !important;letter-spacing:0.01em !important;box-shadow:0 2px 8px " + cfg.primaryColor + "25 !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:6px !important}" +
+      W + " .zcc-wl-btn:hover{filter:brightness(1.06) !important;box-shadow:0 4px 14px " + cfg.primaryColor + "40 !important;transform:translateY(-1px) !important}" +
+      W + " .zcc-wl-btn:active{filter:brightness(0.95) !important;transform:translateY(0) !important}" +
       buildSharedCss(W, cfg)
     );
   }
@@ -488,18 +490,22 @@
       return z;
     }
 
+    // Store the original button HTML so we can restore it exactly after loading
+    var btnOriginalHtml = btn.innerHTML;
+
     function setBtnLoading(loading) {
-      var iconEl = btn.querySelector('.zcc-btn-icon');
-      var labelEl = btn.querySelector('.zcc-btn-label');
       btn.disabled = loading;
       if (loading) {
         btn.classList.add('zcc-btn--loading');
-        if (iconEl) iconEl.innerHTML = ICONS.spinner;
-        if (labelEl) labelEl.style.display = 'none';
+        // Replace entire button content with a lone spinner — no text overlap
+        btn.innerHTML = '<span class="zcc-spinner" aria-hidden="true"></span>';
       } else {
         btn.classList.remove('zcc-btn--loading');
-        if (iconEl) iconEl.innerHTML = ICONS.search;
-        if (labelEl) { labelEl.style.display = ''; labelEl.textContent = cfg.buttonText; }
+        // Restore original icon + label markup
+        btn.innerHTML = btnOriginalHtml;
+        // Keep button text in sync with config (merchant may have customised it)
+        var labelEl = btn.querySelector('.zcc-btn-label');
+        if (labelEl) labelEl.textContent = cfg.buttonText;
       }
     }
 
@@ -723,15 +729,21 @@
   }
 
   function joinWaitlist(zip, email, name, wBtn) {
+    // Store original button HTML so we can restore it exactly (same pattern as setBtnLoading)
+    var wBtnOriginalHtml = wBtn.innerHTML;
+
     wBtn.disabled = true;
-    var wBtnIcon = wBtn.querySelector('.zcc-wl-btn-icon');
-    var wBtnLabel = wBtn.querySelector('.zcc-wl-btn-label');
-    if (wBtnIcon) wBtnIcon.innerHTML = ICONS.spinner;
-    if (wBtnLabel) wBtnLabel.textContent = 'Submitting\u2026';
-    if (!wBtnIcon && !wBtnLabel) wBtn.textContent = 'Submitting\u2026';
+    wBtn.classList.add('zcc-btn--loading');
+    wBtn.innerHTML = '<span class="zcc-spinner" aria-hidden="true"></span>';
 
     var payload = { shop: SHOP, zip: zip, email: email };
     if (name) payload.name = name;
+
+    function restoreBtn() {
+      wBtn.disabled = false;
+      wBtn.classList.remove('zcc-btn--loading');
+      wBtn.innerHTML = wBtnOriginalHtml;
+    }
 
     fetch(API_BASE + "/api/waitlist", {
       method: "POST",
@@ -748,17 +760,11 @@
             '<span>Your request has been submitted! We\u2019ll notify you when delivery is available.</span>' +
             '</div>';
         } else {
-          wBtn.disabled = false;
-          if (wBtnIcon) wBtnIcon.innerHTML = ICONS.mail;
-          if (wBtnLabel) wBtnLabel.textContent = 'Submit Request';
-          if (!wBtnIcon && !wBtnLabel) wBtn.textContent = 'Submit Request';
+          restoreBtn();
         }
       })
       .catch(function () {
-        wBtn.disabled = false;
-        if (wBtnIcon) wBtnIcon.innerHTML = ICONS.mail;
-        if (wBtnLabel) wBtnLabel.textContent = 'Submit Request';
-        if (!wBtnIcon && !wBtnLabel) wBtn.textContent = 'Submit Request';
+        restoreBtn();
       });
   }
 
