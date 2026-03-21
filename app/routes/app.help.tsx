@@ -296,7 +296,7 @@ export default function HelpPage() {
               <Text as="h2" variant="headingMd">
                 Support Hours
               </Text>
-              <InlineGrid columns={{ xs: 1, sm: 3 }} gap="400">
+              <InlineGrid columns={{ xs: 1, sm: 2 }} gap="400">
                 <Box
                   padding="400"
                   background="bg-surface-info"
@@ -313,62 +313,39 @@ export default function HelpPage() {
                       <Icon source={ClockIcon} tone="info" />
                     </Box>
                     <Text as="h3" variant="headingSm" alignment="center">
-                      Mon — Fri
+                      Monday — Friday
                     </Text>
                     <Text as="p" variant="bodyMd" alignment="center" fontWeight="semibold">
-                      9:00 AM — 6:00 PM
+                      9:00 AM — 6:00 PM IST
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                      IST
+                      Full support available
                     </Text>
                   </BlockStack>
                 </Box>
                 <Box
                   padding="400"
-                  background="bg-surface-warning"
+                  background="bg-surface-success"
                   borderWidth="025"
-                  borderColor="border-warning"
+                  borderColor="border-success"
                   borderRadius="200"
                 >
                   <BlockStack gap="200" inlineAlign="center">
                     <Box
-                      background="bg-fill-warning"
+                      background="bg-fill-success"
                       borderRadius="full"
                       padding="200"
                     >
-                      <Icon source={ClockIcon} tone="caution" />
+                      <Icon source={ClockIcon} tone="success" />
                     </Box>
                     <Text as="h3" variant="headingSm" alignment="center">
-                      Saturday
+                      Weekends
                     </Text>
                     <Text as="p" variant="bodyMd" alignment="center" fontWeight="semibold">
-                      10:00 AM — 4:00 PM
+                      We still respond!
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                      IST
-                    </Text>
-                  </BlockStack>
-                </Box>
-                <Box
-                  padding="400"
-                  background="bg-surface"
-                  borderWidth="025"
-                  borderColor="border"
-                  borderRadius="200"
-                >
-                  <BlockStack gap="200" inlineAlign="center">
-                    <Box
-                      background="bg-surface-secondary"
-                      borderRadius="full"
-                      padding="200"
-                    >
-                      <Icon source={ClockIcon} tone="subdued" />
-                    </Box>
-                    <Text as="h3" variant="headingSm" alignment="center">
-                      Sunday
-                    </Text>
-                    <Text as="p" variant="bodyMd" alignment="center" fontWeight="semibold" tone="subdued">
-                      Closed
+                      Replies may take a bit longer but we&rsquo;ve got you covered
                     </Text>
                   </BlockStack>
                 </Box>
