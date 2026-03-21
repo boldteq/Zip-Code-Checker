@@ -808,23 +808,6 @@ export default function FeatureRequestsPage() {
       <Box paddingBlockEnd="1600">
         <Layout>
 
-          {/* ---- Compact Stats Summary ---- */}
-          <Layout.Section>
-            <Card>
-              <InlineStack gap="400" align="start" blockAlign="center" wrap>
-                <Text as="p" variant="headingMd" fontWeight="bold">
-                  {stats.total} {stats.total === 1 ? "request" : "requests"}
-                </Text>
-                <InlineStack gap="300" wrap>
-                  <Badge tone="attention">{`${stats.under_review} Under Review`}</Badge>
-                  <Badge tone="info">{`${stats.planned} Planned`}</Badge>
-                  <Badge tone="warning">{`${stats.in_progress} In Progress`}</Badge>
-                  <Badge tone="success">{`${stats.done} Done`}</Badge>
-                </InlineStack>
-              </InlineStack>
-            </Card>
-          </Layout.Section>
-
           {/* ---- Filter Tabs + Sort + Search + List ---- */}
           <Layout.Section>
             <Card padding="0">
