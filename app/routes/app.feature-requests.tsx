@@ -27,6 +27,7 @@ import {
   Tabs,
   Banner,
   Pagination,
+  Icon,
 } from "@shopify/polaris";
 import { PlusIcon, DeleteIcon, ChevronUpIcon, EditIcon, SearchIcon } from "@shopify/polaris-icons";
 
@@ -115,14 +116,6 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   in_progress: "warning",
   done: "success",
   shipped: "success",
-};
-
-const STATUS_BORDER_COLORS: Record<string, string> = {
-  under_review: "#f59e0b",
-  planned: "#3b82f6",
-  in_progress: "#a855f7",
-  done: "#22c55e",
-  shipped: "#22c55e",
 };
 
 const CATEGORY_OPTIONS = [
@@ -438,6 +431,9 @@ export default function FeatureRequestsPage() {
   const [newDescription, setNewDescription] = useState("");
   const [newCategory, setNewCategory] = useState("General");
 
+  // Delete confirmation state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editId, setEditId] = useState("");
@@ -506,6 +502,7 @@ export default function FeatureRequestsPage() {
     if ("success" in data && data.success && data.intent === "delete") {
       shopify.toast.show("Feature request deleted.");
       setPendingDeleteId(null);
+      setConfirmDeleteId(null);
     }
   }, [deleteFetcher.state, deleteFetcher.data, shopify]);
 
@@ -682,9 +679,10 @@ export default function FeatureRequestsPage() {
     [features, votedIds, optimisticVotes, voteFetcher],
   );
 
-  const handleDelete = useCallback(
+  const handleDeleteConfirm = useCallback(
     (id: string) => {
       setPendingDeleteId(id);
+      setConfirmDeleteId(null);
 
       const fd = new FormData();
       fd.set("intent", "delete");
@@ -813,36 +811,15 @@ export default function FeatureRequestsPage() {
           {/* ---- Compact Stats Summary ---- */}
           <Layout.Section>
             <Card>
-              <InlineStack gap="600" align="start" blockAlign="center" wrap>
-                <BlockStack gap="050">
-                  <Text as="p" variant="bodySm" tone="subdued">Total</Text>
-                  <InlineStack gap="150" blockAlign="center">
-                    <Text as="p" variant="headingMd" fontWeight="bold">{stats.total}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">requests</Text>
-                  </InlineStack>
-                </BlockStack>
-                <div style={{ width: "1px", height: "32px", background: "var(--p-color-border)" }} />
-                <InlineStack gap="400" wrap>
-                  <InlineStack gap="150" blockAlign="center">
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", flexShrink: 0 }} />
-                    <Text as="p" variant="bodySm" tone="subdued">Under Review</Text>
-                    <Badge tone="attention">{String(stats.under_review)}</Badge>
-                  </InlineStack>
-                  <InlineStack gap="150" blockAlign="center">
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6", flexShrink: 0 }} />
-                    <Text as="p" variant="bodySm" tone="subdued">Planned</Text>
-                    <Badge tone="info">{String(stats.planned)}</Badge>
-                  </InlineStack>
-                  <InlineStack gap="150" blockAlign="center">
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#a855f7", flexShrink: 0 }} />
-                    <Text as="p" variant="bodySm" tone="subdued">In Progress</Text>
-                    <Badge tone="warning">{String(stats.in_progress)}</Badge>
-                  </InlineStack>
-                  <InlineStack gap="150" blockAlign="center">
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
-                    <Text as="p" variant="bodySm" tone="subdued">Done</Text>
-                    <Badge tone="success">{String(stats.done)}</Badge>
-                  </InlineStack>
+              <InlineStack gap="400" align="start" blockAlign="center" wrap>
+                <Text as="p" variant="headingMd" fontWeight="bold">
+                  {stats.total} {stats.total === 1 ? "request" : "requests"}
+                </Text>
+                <InlineStack gap="300" wrap>
+                  <Badge tone="attention">{`${stats.under_review} Under Review`}</Badge>
+                  <Badge tone="info">{`${stats.planned} Planned`}</Badge>
+                  <Badge tone="warning">{`${stats.in_progress} In Progress`}</Badge>
+                  <Badge tone="success">{`${stats.done} Done`}</Badge>
                 </InlineStack>
               </InlineStack>
             </Card>
@@ -870,7 +847,7 @@ export default function FeatureRequestsPage() {
                       onChange={handleSearchChange}
                       placeholder="Search by title or description..."
                       autoComplete="off"
-                      prefix={<SearchIcon />}
+                      prefix={<Icon source={SearchIcon} />}
                       clearButton
                       onClearButtonClick={() => handleSearchChange("")}
                     />
@@ -926,74 +903,48 @@ export default function FeatureRequestsPage() {
                     const displayDescription = isExpanded
                       ? feature.description
                       : truncateText(feature.description, 160);
-                    const borderColor = STATUS_BORDER_COLORS[feature.status] ?? "#e5e7eb";
+                    const isConfirmingDelete = confirmDeleteId === feature.id;
 
                     return (
-                      <div
+                      <Box
                         key={feature.id}
-                        style={{
-                          borderLeft: `3px solid ${borderColor}`,
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          transition: "box-shadow 0.15s ease",
-                        }}
+                        padding="400"
+                        background="bg-surface"
+                        borderWidth="025"
+                        borderColor="border"
+                        borderRadius="200"
                       >
-                        <Box
-                          padding="400"
-                          background="bg-surface"
-                          borderWidth="025"
-                          borderColor="border"
-                          borderRadius="200"
+                        <InlineStack
+                          gap="400"
+                          align="start"
+                          blockAlign="start"
+                          wrap={false}
                         >
-                          <InlineStack
-                            gap="400"
-                            align="start"
-                            blockAlign="start"
-                            wrap={false}
-                          >
-                            {/* Vote column */}
-                            <div style={{ flexShrink: 0 }}>
-                              <button
-                                type="button"
-                                onClick={() => handleVote(feature.id)}
-                                disabled={
-                                  pendingVoteId === feature.id &&
-                                  voteFetcher.state !== "idle"
-                                }
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "4px",
-                                  padding: "8px 12px",
-                                  minWidth: "60px",
-                                  border: `1px solid ${isVoted ? "#22c55e" : "var(--p-color-border)"}`,
-                                  borderRadius: "8px",
-                                  background: isVoted
-                                    ? "var(--p-color-bg-surface-success)"
-                                    : "var(--p-color-bg-surface-secondary)",
-                                  cursor: "pointer",
-                                  transition: "background 0.15s ease, border-color 0.15s ease",
-                                  opacity:
+                          {/* Vote column */}
+                          <Box minWidth="64px">
+                            <Box
+                              padding="200"
+                              background={isVoted ? "bg-surface-success" : "bg-surface-secondary"}
+                              borderRadius="200"
+                              borderWidth="025"
+                              borderColor={isVoted ? "border-success" : "border"}
+                            >
+                              <BlockStack gap="100" inlineAlign="center">
+                                <Button
+                                  variant={isVoted ? "primary" : "tertiary"}
+                                  size="slim"
+                                  icon={ChevronUpIcon}
+                                  onClick={() => handleVote(feature.id)}
+                                  loading={
                                     pendingVoteId === feature.id &&
                                     voteFetcher.state !== "idle"
-                                      ? 0.6
-                                      : 1,
-                                }}
-                                aria-label={isVoted ? "Remove vote" : "Vote for this feature"}
-                              >
-                                <span
-                                  style={{
-                                    color: isVoted
-                                      ? "var(--p-color-text-success)"
-                                      : "var(--p-color-text-subdued)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <ChevronUpIcon width={16} height={16} />
-                                </span>
+                                  }
+                                  accessibilityLabel={
+                                    isVoted
+                                      ? "Remove vote"
+                                      : "Vote for this feature"
+                                  }
+                                />
                                 <Text
                                   as="p"
                                   variant="headingSm"
@@ -1011,114 +962,131 @@ export default function FeatureRequestsPage() {
                                 >
                                   {isVoted ? "voted" : "vote"}
                                 </Text>
-                              </button>
-                            </div>
-
-                            {/* Content */}
-                            <Box width="100%">
-                              <BlockStack gap="200">
-                                <InlineStack
-                                  align="space-between"
-                                  blockAlign="start"
-                                  wrap
-                                >
-                                  <Text
-                                    as="p"
-                                    variant="headingSm"
-                                    fontWeight="semibold"
-                                  >
-                                    {feature.title}
-                                  </Text>
-                                  {isAdmin ? (
-                                    <Box minWidth="140px">
-                                      <Select
-                                        label="Status"
-                                        labelHidden
-                                        options={STATUS_OPTIONS}
-                                        value={feature.status}
-                                        onChange={(val) =>
-                                          handleStatusChange(feature.id, val)
-                                        }
-                                      />
-                                    </Box>
-                                  ) : (
-                                    <Badge
-                                      tone={STATUS_TONES[feature.status]}
-                                    >
-                                      {STATUS_LABELS[feature.status] ??
-                                        feature.status}
-                                    </Badge>
-                                  )}
-                                </InlineStack>
-
-                                <Text as="p" tone="subdued" variant="bodySm">
-                                  {displayDescription}
-                                </Text>
-
-                                <InlineStack
-                                  align="space-between"
-                                  blockAlign="center"
-                                  wrap
-                                >
-                                  <InlineStack gap="200" blockAlign="center" wrap>
-                                    <Badge>{feature.category}</Badge>
-                                    {isOwner && <Badge tone="info">Yours</Badge>}
-                                    <Text
-                                      as="p"
-                                      tone="subdued"
-                                      variant="bodySm"
-                                    >
-                                      {formatDate(feature.createdAt)}
-                                    </Text>
-                                    {canEdit && (
-                                      <Button
-                                        variant="plain"
-                                        size="slim"
-                                        icon={EditIcon}
-                                        onClick={() => handleOpenEdit(feature)}
-                                        accessibilityLabel="Edit feature request"
-                                      >
-                                        Edit
-                                      </Button>
-                                    )}
-                                    {canDelete && (
-                                      <Button
-                                        variant="plain"
-                                        tone="critical"
-                                        size="slim"
-                                        icon={DeleteIcon}
-                                        onClick={() =>
-                                          handleDelete(feature.id)
-                                        }
-                                        loading={
-                                          pendingDeleteId === feature.id &&
-                                          deleteFetcher.state !== "idle"
-                                        }
-                                        accessibilityLabel="Delete feature request"
-                                      >
-                                        Delete
-                                      </Button>
-                                    )}
-                                  </InlineStack>
-                                  {needsTruncation && (
-                                    <Button
-                                      variant="plain"
-                                      size="slim"
-                                      onClick={() =>
-                                        handleToggleExpand(feature.id)
-                                      }
-                                    >
-                                      {isExpanded
-                                        ? "Show less"
-                                        : "View details \u2192"}
-                                    </Button>
-                                  )}
-                                </InlineStack>
                               </BlockStack>
                             </Box>
-                          </InlineStack>
-                        </Box>
-                      </div>
+                          </Box>
+
+                          {/* Content */}
+                          <BlockStack gap="200">
+                            <InlineStack
+                              align="space-between"
+                              blockAlign="start"
+                              wrap
+                            >
+                              <Text
+                                as="p"
+                                variant="headingSm"
+                                fontWeight="semibold"
+                              >
+                                {feature.title}
+                              </Text>
+                              {isAdmin ? (
+                                <Box minWidth="140px">
+                                  <Select
+                                    label="Status"
+                                    labelHidden
+                                    options={STATUS_OPTIONS}
+                                    value={feature.status}
+                                    onChange={(val) =>
+                                      handleStatusChange(feature.id, val)
+                                    }
+                                  />
+                                </Box>
+                              ) : (
+                                <Badge
+                                  tone={STATUS_TONES[feature.status]}
+                                >
+                                  {STATUS_LABELS[feature.status] ??
+                                    feature.status}
+                                </Badge>
+                              )}
+                            </InlineStack>
+
+                            <Text as="p" tone="subdued" variant="bodySm">
+                              {displayDescription}
+                            </Text>
+
+                            {needsTruncation && (
+                              <Button
+                                variant="plain"
+                                size="slim"
+                                onClick={() =>
+                                  handleToggleExpand(feature.id)
+                                }
+                              >
+                                {isExpanded
+                                  ? "Show less"
+                                  : "Read more"}
+                              </Button>
+                            )}
+
+                            <InlineStack gap="200" blockAlign="center" wrap>
+                              <Badge>{feature.category}</Badge>
+                              {isOwner && <Badge tone="info">Yours</Badge>}
+                              <Text
+                                as="p"
+                                tone="subdued"
+                                variant="bodySm"
+                              >
+                                {formatDate(feature.createdAt)}
+                              </Text>
+                            </InlineStack>
+
+                            {/* Actions row */}
+                            <InlineStack gap="200" blockAlign="center" wrap>
+                              {canEdit && (
+                                <Button
+                                  variant="plain"
+                                  size="slim"
+                                  icon={EditIcon}
+                                  onClick={() => handleOpenEdit(feature)}
+                                  accessibilityLabel="Edit feature request"
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                              {canDelete && !isConfirmingDelete && (
+                                <Button
+                                  variant="plain"
+                                  tone="critical"
+                                  size="slim"
+                                  icon={DeleteIcon}
+                                  onClick={() => setConfirmDeleteId(feature.id)}
+                                  accessibilityLabel="Delete feature request"
+                                >
+                                  Delete
+                                </Button>
+                              )}
+                              {isConfirmingDelete && (
+                                <InlineStack gap="200" blockAlign="center">
+                                  <Text as="p" variant="bodySm" tone="critical">
+                                    Delete this request?
+                                  </Text>
+                                  <Button
+                                    variant="primary"
+                                    tone="critical"
+                                    size="slim"
+                                    onClick={() => handleDeleteConfirm(feature.id)}
+                                    loading={
+                                      pendingDeleteId === feature.id &&
+                                      deleteFetcher.state !== "idle"
+                                    }
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    variant="plain"
+                                    size="slim"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </InlineStack>
+                              )}
+                            </InlineStack>
+                          </BlockStack>
+                        </InlineStack>
+                      </Box>
                     );
                   })}
                 </BlockStack>
