@@ -301,12 +301,11 @@ export default function HelpPage() {
               borderRadius="300"
             >
               <BlockStack gap="400">
-                <InlineStack gap="200" blockAlign="center" align="center">
-                  <Icon source={ClockIcon} tone="subdued" />
-                  <Text as="h2" variant="headingMd">
-                    Support Hours
+                <BlockStack gap="100" inlineAlign="center">
+                  <Text as="h2" variant="headingMd" alignment="center">
+                    We&rsquo;re here when you need us
                   </Text>
-                </InlineStack>
+                </BlockStack>
                 <InlineGrid columns={{ xs: 1, sm: 2 }} gap="400">
                   <Box
                     padding="500"
