@@ -1001,18 +1001,18 @@ export default function FeatureRequestsPage() {
                           wrap={false}
                         >
                           {/* Vote column */}
-                          <Box minWidth="64px">
+                          <Box minWidth="56px">
                             <Box
-                              padding="200"
+                              padding="300"
                               background={isVoted ? "bg-surface-success" : "bg-surface-secondary"}
                               borderRadius="200"
                               borderWidth="025"
                               borderColor={isVoted ? "border-success" : "border"}
                             >
-                              <BlockStack gap="100" inlineAlign="center">
+                              <BlockStack gap="050" inlineAlign="center">
                                 <Button
                                   variant={isVoted ? "primary" : "tertiary"}
-                                  size="slim"
+                                  size="micro"
                                   icon={ChevronUpIcon}
                                   onClick={() => handleVote(feature.id)}
                                   loading={
@@ -1034,137 +1034,135 @@ export default function FeatureRequestsPage() {
                                 >
                                   {feature.votesCount}
                                 </Text>
-                                <Text
-                                  as="p"
-                                  variant="bodySm"
-                                  alignment="center"
-                                  tone={isVoted ? "success" : "subdued"}
-                                >
-                                  {isVoted ? "voted" : "vote"}
-                                </Text>
                               </BlockStack>
                             </Box>
                           </Box>
 
                           {/* Content */}
-                          <BlockStack gap="200">
-                            <InlineStack
-                              align="space-between"
-                              blockAlign="start"
-                              wrap
-                            >
-                              <Text
-                                as="p"
-                                variant="headingSm"
-                                fontWeight="semibold"
+                          <Box minWidth="0" width="100%">
+                            <BlockStack gap="200">
+                              {/* Row 1: Title + Status */}
+                              <InlineStack
+                                align="space-between"
+                                blockAlign="center"
+                                wrap={false}
+                                gap="300"
                               >
-                                {feature.title}
-                              </Text>
-                              {isAdmin ? (
-                                <Box minWidth="140px">
-                                  <Select
-                                    label="Status"
-                                    labelHidden
-                                    options={STATUS_OPTIONS}
-                                    value={feature.status}
-                                    onChange={(val) =>
-                                      handleStatusChange(feature.id, val)
-                                    }
-                                  />
-                                </Box>
-                              ) : (
-                                <Badge
-                                  tone={STATUS_TONES[feature.status]}
+                                <Text
+                                  as="h3"
+                                  variant="headingSm"
+                                  fontWeight="semibold"
+                                  truncate
                                 >
-                                  {STATUS_LABELS[feature.status] ??
-                                    feature.status}
-                                </Badge>
-                              )}
-                            </InlineStack>
-
-                            <Text as="p" tone="subdued" variant="bodySm">
-                              {displayDescription}
-                            </Text>
-
-                            {needsTruncation && (
-                              <Button
-                                variant="plain"
-                                size="slim"
-                                onClick={() =>
-                                  handleToggleExpand(feature.id)
-                                }
-                              >
-                                {isExpanded
-                                  ? "Show less"
-                                  : "Read more"}
-                              </Button>
-                            )}
-
-                            <InlineStack gap="200" blockAlign="center" wrap>
-                              <Badge>{feature.category}</Badge>
-                              {isOwner && <Badge tone="info">Yours</Badge>}
-                              <Text
-                                as="p"
-                                tone="subdued"
-                                variant="bodySm"
-                              >
-                                {formatDate(feature.createdAt)}
-                              </Text>
-                            </InlineStack>
-
-                            {/* Actions row */}
-                            <InlineStack gap="200" blockAlign="center" wrap>
-                              {canEdit && (
-                                <Button
-                                  variant="plain"
-                                  size="slim"
-                                  icon={EditIcon}
-                                  onClick={() => handleOpenEdit(feature)}
-                                  accessibilityLabel="Edit feature request"
-                                >
-                                  Edit
-                                </Button>
-                              )}
-                              {canDelete && !isConfirmingDelete && (
-                                <Button
-                                  variant="plain"
-                                  tone="critical"
-                                  size="slim"
-                                  icon={DeleteIcon}
-                                  onClick={() => setConfirmDeleteId(feature.id)}
-                                  accessibilityLabel="Delete feature request"
-                                >
-                                  Delete
-                                </Button>
-                              )}
-                              {isConfirmingDelete && (
-                                <InlineStack gap="200" blockAlign="center">
-                                  <Text as="p" variant="bodySm" tone="critical">
-                                    Delete this request?
-                                  </Text>
-                                  <Button
-                                    variant="primary"
-                                    tone="critical"
-                                    size="slim"
-                                    onClick={() => handleDeleteConfirm(feature.id)}
-                                    loading={
-                                      pendingDeleteId === feature.id &&
-                                      deleteFetcher.state !== "idle"
-                                    }
+                                  {feature.title}
+                                </Text>
+                                {isAdmin ? (
+                                  <Box minWidth="140px">
+                                    <Select
+                                      label="Status"
+                                      labelHidden
+                                      options={STATUS_OPTIONS}
+                                      value={feature.status}
+                                      onChange={(val) =>
+                                        handleStatusChange(feature.id, val)
+                                      }
+                                    />
+                                  </Box>
+                                ) : (
+                                  <Badge
+                                    tone={STATUS_TONES[feature.status]}
                                   >
-                                    Confirm
-                                  </Button>
+                                    {STATUS_LABELS[feature.status] ??
+                                      feature.status}
+                                  </Badge>
+                                )}
+                              </InlineStack>
+
+                              {/* Row 2: Description + Read more */}
+                              <BlockStack gap="100">
+                                <Text as="p" tone="subdued" variant="bodyMd">
+                                  {displayDescription}
+                                </Text>
+                                {needsTruncation && (
                                   <Button
                                     variant="plain"
                                     size="slim"
-                                    onClick={() => setConfirmDeleteId(null)}
+                                    onClick={() =>
+                                      handleToggleExpand(feature.id)
+                                    }
                                   >
-                                    Cancel
+                                    {isExpanded ? "Show less" : "Read more"}
                                   </Button>
+                                )}
+                              </BlockStack>
+
+                              {/* Row 3: Metadata + Actions */}
+                              <InlineStack
+                                align="space-between"
+                                blockAlign="center"
+                                wrap
+                                gap="200"
+                              >
+                                <InlineStack gap="200" blockAlign="center" wrap>
+                                  <Badge>{feature.category}</Badge>
+                                  {isOwner && <Badge tone="info">Yours</Badge>}
+                                  <Text as="p" tone="subdued" variant="bodySm">
+                                    {formatDate(feature.createdAt)}
+                                  </Text>
                                 </InlineStack>
-                              )}
-                            </InlineStack>
-                          </BlockStack>
+
+                                {/* Actions */}
+                                {isConfirmingDelete ? (
+                                  <InlineStack gap="200" blockAlign="center">
+                                    <Text as="p" variant="bodySm" tone="critical">
+                                      Delete?
+                                    </Text>
+                                    <Button
+                                      variant="primary"
+                                      tone="critical"
+                                      size="slim"
+                                      onClick={() => handleDeleteConfirm(feature.id)}
+                                      loading={
+                                        pendingDeleteId === feature.id &&
+                                        deleteFetcher.state !== "idle"
+                                      }
+                                    >
+                                      Yes
+                                    </Button>
+                                    <Button
+                                      variant="tertiary"
+                                      size="slim"
+                                      onClick={() => setConfirmDeleteId(null)}
+                                    >
+                                      No
+                                    </Button>
+                                  </InlineStack>
+                                ) : (
+                                  <InlineStack gap="100" blockAlign="center">
+                                    {canEdit && (
+                                      <Button
+                                        variant="plain"
+                                        size="slim"
+                                        icon={EditIcon}
+                                        onClick={() => handleOpenEdit(feature)}
+                                        accessibilityLabel="Edit"
+                                      />
+                                    )}
+                                    {canDelete && (
+                                      <Button
+                                        variant="plain"
+                                        tone="critical"
+                                        size="slim"
+                                        icon={DeleteIcon}
+                                        onClick={() => setConfirmDeleteId(feature.id)}
+                                        accessibilityLabel="Delete"
+                                      />
+                                    )}
+                                  </InlineStack>
+                                )}
+                              </InlineStack>
+                            </BlockStack>
+                          </Box>
                         </InlineStack>
                       </Box>
                     );
